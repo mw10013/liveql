@@ -1,0 +1,15 @@
+{
+  "name": "liveql",
+  "version": "0.0.1",
+  "description": "",
+  "main": "liveql-n4l.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "apollo-server": "^2.21.1",
+    "graphql": "^15.5.0"
+  }
+}
