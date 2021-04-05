@@ -31,7 +31,7 @@ async function set(id, property, value) {
   });
 }
 
-async function call(id, args) {
+async function call(id, ...args) {
   return exec({
     action: "call",
     idOrPath: id,
@@ -95,8 +95,6 @@ Max.addHandler("fi", async () => {
       action: "get",
       idOrPath: "live_set tracks 0 clip_slots 0 clip",
     });
-    await call(clip1.id, ["select_all_notes"]);
-    var notes1 = await call(clip1.id, ["get_selected_notes"]);
 
     var clip2 = await exec({
       action: "get",
@@ -109,7 +107,7 @@ Max.addHandler("fi", async () => {
 
 Max.addHandler("fo", async () => {
   try {
-    await call(17, ["remove_notes_by_id", 88, 89]);
+    await call(17, "remove_notes_by_id", 88, 89);
   } catch (err) {
     await Max.post("caught exception: " + err.toString());
   }
@@ -118,12 +116,12 @@ Max.addHandler("fo", async () => {
 Max.addHandler("fum", async () => {
   try {
     var o = await get("live_set view detail_clip", ["name"]);
-    await call(o.id, ["select_all_notes"]);
-    var json = await call(o.id, ["get_selected_notes_extended"]);
+    await call(o.id, "select_all_notes");
+    var json = await call(o.id, "get_selected_notes_extended");
     var data = JSON.parse(json);
     if (data.notes && data.notes.length > 0) {
       data.notes[0].pitch = data.notes[0].pitch === 60 ? 67 : 60;
-      await call(o.id, ["apply_note_modifications", data]);
+      await call(o.id, "apply_note_modifications", data);
     }
   } catch (err) {
     await Max.post("caught exception: " + err.toString());
@@ -272,13 +270,14 @@ function sortJsonNotesDictionary(json) {
 
 async function getNotesExtended(parent, args) {
   // resolver interface with parent arg unused
-  var json = await call(args.id, [
+  var json = await call(
+    args.id,
     "get_notes_extended",
     args.from_pitch,
     args.pitch_span,
     args.from_time,
-    args.time_span,
-  ]);
+    args.time_span
+  );
   return sortJsonNotesDictionary(json);
 }
 
@@ -303,11 +302,11 @@ const resolvers = {
       return getClip(args.id);
     },
     clip_add_new_notes: async (parent, args) => {
-      await call(args.id, ["add_new_notes", args.notes_dictionary]);
+      await call(args.id, "add_new_notes", args.notes_dictionary);
       return getClip(args.id);
     },
     clip_apply_note_modifications: async (parent, args) => {
-      await call(args.id, ["apply_note_modifications", args.notes_dictionary]);
+      await call(args.id, "apply_note_modifications", args.notes_dictionary);
       return getClip(args.id);
     },
     clip_get_notes_extended: getNotesExtended,
@@ -320,7 +319,7 @@ const resolvers = {
       return getClip(args.id);
     },
     clip_remove_notes_by_id: async (parent, args) => {
-      await call(args.id, ["remove_notes_by_id", ...args.ids]);
+      await call(args.id, "remove_notes_by_id", ...args.ids);
       return getClip(args.id);
     },
   },
