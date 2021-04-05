@@ -303,6 +303,30 @@ function getClip(id) {
   ]);
 }
 
+function compareNotes(a, b) {
+  // start_time ascending, pitch ascending
+  if (a.start_time < b.start_time) return -1;
+  if (a.start_time > b.start_time) return 1;
+  return a.pitch - b.pitch;
+}
+
+function sortJsonNotesDictionary(json) {
+  const data = JSON.parse(json);
+  return { notes: [...data.notes].sort(compareNotes) };
+}
+
+async function getNotesExtended(parent, args) {
+  // resolver interface with parent arg unused
+  var json = await call(args.id, [
+    "get_notes_extended",
+    args.from_pitch,
+    args.pitch_span,
+    args.from_time,
+    args.time_span,
+  ]);
+  return sortJsonNotesDictionary(json);
+}
+
 const resolvers = {
   Query: {
     live_set: () => get("live_set", null, null, ["view"], ["tracks"]),
@@ -331,19 +355,10 @@ const resolvers = {
       await call(args.id, ["apply_note_modifications", args.notes_dictionary]);
       return getClip(args.id);
     },
-    clip_get_notes_extended: async (parent, args) => {
-      var json = await call(args.id, [
-        "get_notes_extended",
-        args.from_pitch,
-        args.pitch_span,
-        args.from_time,
-        args.time_span,
-      ]);
-      return JSON.parse(json);
-    },
+    clip_get_notes_extended: getNotesExtended,
     clip_get_selected_notes_extended: async (parent, args) => {
       var json = await call(args.id, "get_selected_notes_extended");
-      return JSON.parse(json);
+      return sortJsonNotesDictionary(json);
     },
     clip_select_all_notes: async (parent, args) => {
       await call(args.id, "select_all_notes");
@@ -377,14 +392,13 @@ const resolvers = {
   Clip: {
     notes: async (parent) => {
       if (parent.is_midi_clip) {
-        const json = await call(parent.id, [
-          "get_notes_extended",
-          0,
-          128,
-          0,
-          parent.length,
-        ]);
-        const data = JSON.parse(json);
+        const data = await getNotesExtended(parent, {
+          id: parent.id,
+          from_pitch: 0,
+          pitch_span: 128,
+          from_time: 0,
+          time_span: parent.length,
+        });
         return data.notes;
       }
       return null;
