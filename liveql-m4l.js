@@ -1,25 +1,6 @@
 inlets = 1;
 outlets = 1;
 
-function log() {
-  for (var i = 0, len = arguments.length; i < len; i++) {
-    var message = arguments[i];
-    if (message && message.toString) {
-      var s = message.toString();
-      if (s.indexOf("[object ") >= 0) {
-        s = JSON.stringify(message);
-      }
-      post(s);
-    } else if (message === null) {
-      post("<null>");
-    } else {
-      post(message);
-    }
-  }
-  post("\n");
-}
-log.local = 1;
-
 function getLive(idOrPath) {
   var live = new LiveAPI(
     typeof idOrPath === "string" ? idOrPath : "id " + idOrPath
@@ -117,12 +98,7 @@ function call(json) {
     var params = JSON.parse(json);
     actionId = params.actionId;
     var live = getLive(params.idOrPath);
-    var data = live.call(params.first);
-    if (params.more) {
-      params.more.forEach(function (item) {
-        data = live.call(item);
-      });
-    }
+    var data = live.call(params.args);
     outletSuccessfulResult(actionId, data);
   } catch (err) {
     outletFailedResult(actionId, err);

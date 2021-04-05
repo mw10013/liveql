@@ -31,20 +31,16 @@ async function set(id, property, value) {
   });
 }
 
-async function call(id, first, more = null) {
+async function call(id, args) {
   return exec({
     action: "call",
     idOrPath: id,
-    first,
-    more,
+    args,
   });
 }
 
 let actionId = 0;
 let actionResultHandlers = new Map();
-// TODO: multiplex
-var resolveResult;
-var rejectResult;
 
 async function exec(params) {
   actionId += 1;
@@ -68,7 +64,6 @@ Max.addHandler("result", async (json) => {
       await Max.post("failed result: " + json);
       throw result.message;
     }
-
     if (resolve) {
       resolve(result.data);
     }
@@ -88,44 +83,10 @@ Max.addHandler("fee", async () => {
       "name",
     ]);
     // await Max.post(JSON.stringify(o));
-
-    await call(o.id, ["select_all_notes"]);
-    await call(o.id, ["get_selected_notes"]);
   } catch (err) {
     await Max.post("caught exception: " + err.toString());
   }
 });
-
-function intToFixed(x) {
-  return Number.isInteger(x) ? x.toFixed(4) : x;
-}
-
-function partitionNotes(notes) {
-  var result = [];
-  var a = null;
-  notes.forEach(function (x) {
-    if (x === "notes") {
-      a = ["notes"];
-    } else if (x === "note") {
-      if (a.length === 6) {
-        a[2] = intToFixed(a[2]);
-        a[3] = intToFixed(a[3]);
-      }
-      result.push(a);
-      a = ["note"];
-    } else if (x === "done") {
-      if (a.length === 6) {
-        a[2] = intToFixed(a[2]);
-        a[3] = intToFixed(a[3]);
-      }
-      result.push(a);
-      result.push(["done"]);
-    } else {
-      a.push(x);
-    }
-  });
-  return result;
-}
 
 Max.addHandler("fi", async () => {
   try {
@@ -141,12 +102,6 @@ Max.addHandler("fi", async () => {
       action: "get",
       idOrPath: "live_set tracks 1 clip_slots 0 clip",
     });
-
-    await call(clip2.id, ["select_all_notes"]);
-    var notes2 = await call(clip2.id, ["get_selected_notes"]);
-
-    await call(clip1.id, ["replace_selected_notes"], partitionNotes(notes2));
-    await call(clip2.id, ["replace_selected_notes"], partitionNotes(notes1));
   } catch (err) {
     await Max.post("caught exception: " + err.toString());
   }
