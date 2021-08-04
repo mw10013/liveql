@@ -132,6 +132,7 @@ const typeDefs = gql`
   type Song {
     id: Int!
     path: String!
+    is_playing: Int!
     view: SongView!
     tracks: [Track!]!
   }
@@ -215,6 +216,8 @@ const typeDefs = gql`
   }
 
   type Mutation {
+    song_start_playing(id: Int!): Song
+    song_stop_playing(id: Int!): Song
     track_set_name(id: Int!, name: String!): Track
     clip_set_properties(id: Int!, properties: ClipPropertiesInput!): Clip
     clip_add_new_notes(id: Int!, notes_dictionary: NotesDictionaryInput!): Clip
@@ -234,6 +237,10 @@ const typeDefs = gql`
     clip_remove_notes_by_id(id: Int!, ids: [Int!]!): Clip
   }
 `;
+
+function getSong() {
+  return get("live_set", ["is_playing"], null, ["view"], ["tracks"]);  
+}
 
 function getTrack(id) {
   return get(id, ["has_midi_input", "name"], null, null, ["clip_slots"]);
@@ -283,9 +290,17 @@ async function getNotesExtended(parent, args) {
 
 const resolvers = {
   Query: {
-    live_set: () => get("live_set", null, null, ["view"], ["tracks"]),
+    live_set: getSong,
   },
   Mutation: {
+    song_start_playing: async (parent, args) => {
+      await call(args.id, "start_playing");
+      return getSong();
+    },
+    song_stop_playing: async (parent, args) => {
+      await call(args.id, "stop_playing");
+      return getSong();
+    },
     track_set_name: async (parent, args) => {
       await set(args.id, "name", args.name);
       return getTrack(args.id);
