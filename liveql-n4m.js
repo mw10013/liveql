@@ -235,6 +235,13 @@ const typeDefs = gql`
     clip_get_selected_notes_extended(id: Int!): NotesDictionary!
     clip_select_all_notes(id: Int!): Clip
     clip_remove_notes_by_id(id: Int!, ids: [Int!]!): Clip
+    clip_remove_notes_extended(
+      id: Int!
+      from_pitch: Int!
+      pitch_span: Int!
+      from_time: Float!
+      time_span: Float!
+    ): Clip
   }
 `;
 
@@ -337,6 +344,11 @@ const resolvers = {
       await call(args.id, "remove_notes_by_id", ...args.ids);
       return getClip(args.id);
     },
+    clip_remove_notes_extended: async (parent, args) => {
+      await call(args.id, "remove_notes_extended", 
+        args.from_pitch, args.pitch_span, args.from_time, args.time_span);
+      return getClip(args.id);
+    }
   },
   Song: {
     view: (parent) => {
