@@ -225,6 +225,7 @@ const typeDefs = gql`
       id: Int!
       notes_dictionary: NotesDictionaryInput!
     ): Clip
+    clip_fire(id: Int!): Clip
     clip_get_notes_extended(
       id: Int!
       from_pitch: Int!
@@ -246,7 +247,7 @@ const typeDefs = gql`
 `;
 
 function getSong() {
-  return get("live_set", ["is_playing"], null, ["view"], ["tracks"]);  
+  return get("live_set", ["is_playing"], null, ["view"], ["tracks"]);
 }
 
 function getTrack(id) {
@@ -331,6 +332,10 @@ const resolvers = {
       await call(args.id, "apply_note_modifications", args.notes_dictionary);
       return getClip(args.id);
     },
+    clip_fire: async (parent, args) => {
+      await call(args.id, "fire");
+      return getClip(args.id);
+    },
     clip_get_notes_extended: getNotesExtended,
     clip_get_selected_notes_extended: async (parent, args) => {
       var json = await call(args.id, "get_selected_notes_extended");
@@ -345,10 +350,16 @@ const resolvers = {
       return getClip(args.id);
     },
     clip_remove_notes_extended: async (parent, args) => {
-      await call(args.id, "remove_notes_extended", 
-        args.from_pitch, args.pitch_span, args.from_time, args.time_span);
+      await call(
+        args.id,
+        "remove_notes_extended",
+        args.from_pitch,
+        args.pitch_span,
+        args.from_time,
+        args.time_span
+      );
       return getClip(args.id);
-    }
+    },
   },
   Song: {
     view: (parent) => {
