@@ -149,7 +149,7 @@ const typeDefs = gql`
     path: String!
     clip_slots: [ClipSlot!]!
     has_midi_input: Int!
-    name: String
+    name: String!
   }
 
   type ClipSlot {
@@ -166,7 +166,7 @@ const typeDefs = gql`
     is_arrangement_clip: Int
     is_midi_clip: Int
     length: Float
-    name: String
+    name: String!
     signature_denominator: Int
     signature_numerator: Int
     start_time: Float
