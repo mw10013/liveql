@@ -5,8 +5,7 @@ function getLive(idOrPath) {
   var live = new LiveAPI(
     typeof idOrPath === "string" ? idOrPath : "id " + idOrPath
   );
-  // LOM says id is number, but string here.
-  if (live.id === "0") {
+  if (live.path === "") {
     throw "Invalid live id or path: " + idOrPath;
   }
   return live;
