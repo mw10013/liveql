@@ -3,7 +3,7 @@ const Max = require("max-api");
 const { ApolloServer, gql } = require("apollo-server");
 
 // This will be printed directly to the Max console
-Max.post(`Loaded the ${path.basename(__filename)} script`);
+Max.post(`liveql: loaded the ${path.basename(__filename)} script`);
 
 async function get(
   idOrPath,
@@ -47,8 +47,6 @@ async function exec(params) {
 
   const p = new Promise((resolve, reject) => {
     actionResultHandlers.set(actionId, { resolve, reject });
-    resolveResult = resolve;
-    rejectResult = reject;
   });
   const action = { actionId, ...params };
   await Max.outlet(action.action, JSON.stringify(action));
@@ -61,7 +59,7 @@ Max.addHandler("result", async (json) => {
   actionResultHandlers.delete(result.actionId);
   try {
     if (result.status !== "succeeded") {
-      await Max.post("failed result: " + json);
+      await Max.post("liveql: failed result: " + json);
       throw result.message;
     }
     if (resolve) {
@@ -71,60 +69,6 @@ Max.addHandler("result", async (json) => {
     if (reject) {
       reject(err);
     }
-  }
-});
-
-Max.addHandler("fee", async () => {
-  try {
-    // await Max.post("n4m:fee: 3");
-    var o = await get("live_set view detail_clip", [
-      "length",
-      "is_midi_clip",
-      "name",
-    ]);
-    // await Max.post(JSON.stringify(o));
-  } catch (err) {
-    await Max.post("caught exception: " + err.toString());
-  }
-});
-
-Max.addHandler("fi", async () => {
-  try {
-    // await Max.post("fi: 4");
-    var clip1 = await exec({
-      action: "get",
-      idOrPath: "live_set tracks 0 clip_slots 0 clip",
-    });
-
-    var clip2 = await exec({
-      action: "get",
-      idOrPath: "live_set tracks 1 clip_slots 0 clip",
-    });
-  } catch (err) {
-    await Max.post("caught exception: " + err.toString());
-  }
-});
-
-Max.addHandler("fo", async () => {
-  try {
-    await call(17, "remove_notes_by_id", 88, 89);
-  } catch (err) {
-    await Max.post("caught exception: " + err.toString());
-  }
-});
-
-Max.addHandler("fum", async () => {
-  try {
-    var o = await get("live_set view detail_clip", ["name"]);
-    await call(o.id, "select_all_notes");
-    var json = await call(o.id, "get_selected_notes_extended");
-    var data = JSON.parse(json);
-    if (data.notes && data.notes.length > 0) {
-      data.notes[0].pitch = data.notes[0].pitch === 60 ? 67 : 60;
-      await call(o.id, "apply_note_modifications", data);
-    }
-  } catch (err) {
-    await Max.post("caught exception: " + err.toString());
   }
 });
 
