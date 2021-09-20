@@ -106,14 +106,14 @@ const typeDefs = gql`
   type Clip {
     id: Int!
     path: String!
-    end_time: Float
-    is_arrangement_clip: Int
-    is_midi_clip: Int
-    length: Float
+    end_time: Float!
+    is_arrangement_clip: Int!
+    is_midi_clip: Int!
+    length: Float!
     name: String!
-    signature_denominator: Int
-    signature_numerator: Int
-    start_time: Float
+    signature_denominator: Int!
+    signature_numerator: Int!
+    start_time: Float!
     notes: [Note!]
   }
 
