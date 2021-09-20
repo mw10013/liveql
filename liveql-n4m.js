@@ -124,15 +124,15 @@ const typeDefs = gql`
   }
 
   type Note {
-    note_id: Int
+    note_id: Int!
     pitch: Int!
-    start_time: Float
-    duration: Float
-    velocity: Float
-    mute: Int
-    probability: Float
-    velocity_deviation: Float
-    release_velocity: Float
+    start_time: Float!
+    duration: Float!
+    velocity: Float!
+    mute: Int!
+    probability: Float!
+    velocity_deviation: Float!
+    release_velocity: Float!
   }
 
   type NotesDictionary {
@@ -141,7 +141,7 @@ const typeDefs = gql`
 
   input NoteInput {
     note_id: Int
-    pitch: Int!
+    pitch: Int
     start_time: Float
     duration: Float
     velocity: Float
