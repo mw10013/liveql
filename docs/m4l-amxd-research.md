@@ -100,9 +100,11 @@ Project-Name/
 
 ## "Keep Project Folder Organized" Setting (From Sources)
 
-This is a **per-project** setting in Max that automatically sorts files into category-based subfolders when files are added to a project or when the project is opened. **It is ON by default.** [14]
+This is a **per-project** setting in Max that automatically sorts files into category-based subfolders. **It is ON by default** and **triggers when the project/device is opened**, not just when files are added. Multiple forum reports confirm files are moved every time a project is opened with this setting enabled. [14] [16] [17]
 
-When enabled, Max moves files into subfolders based on type:
+The setting is stored inside the .amxd as `"autoorganize" : 1` in the project JSON. The current `liveql.amxd` has it set to **1 (ON)**.
+
+When enabled, Max creates subfolders in the **project folder** (the folder containing the .amxd on disk) and physically moves files into them based on type:
 
 | Subfolder | File types moved there |
 |---|---|
@@ -113,9 +115,33 @@ When enabled, Max moves files into subfolders based on type:
 | `externals/` | `.mxo`, `.mxe`, `.mxe64` |
 | `other/` | anything else |
 
-**This breaks Node for Max projects.** Node.js requires `package.json`, `.js` files, and `node_modules` to be co-located. With the setting enabled, `.js` files get moved to `code/` and `package.json` gets moved to `data/`, which breaks `require()` resolution and the entire dependency chain. [11] [14]
+### What this would do to the liveql repo
 
-To disable: open the **Project Inspector** (gear menu in the Project window toolbar) and uncheck "Keep Project Folder Organized." This is the first best practice listed in the official Node for Max project documentation. [11] [14]
+If `liveql.amxd` is loaded in Live with `autoorganize: 1`, Max would create new directories in the git repo root (`/Users/mw/Documents/src/liveql/`) and move files:
+
+| File | Moved to |
+|---|---|
+| `liveql-m4l.js` | `code/liveql-m4l.js` |
+| `liveql-n4m.js` | `code/liveql-n4m.js` |
+| `package.json` | `data/package.json` |
+
+Files are moved, not deleted — but this breaks Node for Max because Node.js requires `package.json`, `.js` files, and `node_modules` to be co-located in the same directory. Once Max scatters `.js` into `code/` and `.json` into `data/`, `require()` resolution and the entire dependency chain break. [11] [14]
+
+### How to safely disable it
+
+Because the setting triggers on load, you must disable it immediately after loading the device, then undo any file moves. The git repo provides a safety net — any moved files can be restored with `git checkout`.
+
+Step-by-step instructions:
+
+1. **Ensure git working tree is clean** — commit or stash any changes so you can restore if Max moves files.
+2. **Load the device** — drag `liveql.amxd` from the repo folder into a track in Ableton Live. Max may move `.js`/`.json` files at this point.
+3. **Open the Max editor** — click the wrench icon (or right-click the device title bar and select "Open in Max Editor") on the device in Live's device chain.
+4. **Open the Project window** — in the Max editor's **bottom toolbar**, click the **"Show Containing Project"** button (folder icon). A separate file-manager-style window opens showing the device's files organized by category.
+5. **Open the Project Inspector** — in the Project window's **toolbar**, click the **gear icon**, then select **"Project Inspector"** from the menu.
+6. **Disable the setting** — in the Project Inspector dialog, uncheck **"Keep Project Folder Organized"**.
+7. **Save the device** — Cmd+S in the Max editor. This persists `"autoorganize" : 0` inside the .amxd.
+8. **Restore moved files** — if Max moved files, close the device, then run `git checkout -- .` in the repo to restore the original file layout.
+9. **Reload the device** — drag the .amxd in again. This time files will not be moved. [11] [14] [16]
 
 ## Development Workflow (Reasoned From Sources)
 
@@ -123,25 +149,47 @@ To disable: open the **Project Inspector** (gear menu in the Project window tool
 
 Old .amxd files open in Live 12 (Max 9) without manual migration. The .amxd format (binary header + JSON patcher + binary footer) has remained structurally stable across Max versions. Saving in Max 9 writes the current format; there is no explicit "upgrade" step. [12]
 
-### Editing the Device
+### First-Time Setup (One-Time)
 
-The .amxd cannot be meaningfully edited outside of Max/Live — the binary header contains checksums that would break if the file were modified externally. To edit: [13]
+Before doing any other development, disable "Keep Project Folder Organized" to prevent Max from rearranging the repo. Follow the step-by-step instructions in the section above. This only needs to be done once — the setting is saved inside the .amxd.
 
-1. Load the .amxd onto a track in Live (drag from Finder or the browser).
-2. Click **"Edit"** on the device title bar to open the Max editor.
-3. Edit the patcher visually. Cmd+S saves back to the original file location.
+### Editing the Patcher
 
-### Working From the Git Repo
+The .amxd cannot be meaningfully edited outside of Max/Live — the binary header contains checksums that would break if the file were modified externally. [13]
 
-The simplest development setup is to load the .amxd directly from the git repo folder: [4] [11]
+1. **Load the device** — In Ableton Live, drag `liveql.amxd` from the repo folder (`/Users/mw/Documents/src/liveql/`) onto any track. You can drag from Finder, or add the repo folder to Live's browser sidebar under "Places" (right-click in the sidebar → "Add Folder…" → select the repo folder). Do NOT copy or "Save As" to the User Library. [13]
+2. **Open the Max editor** — Click the wrench icon on the device in Live's device chain (or right-click the device title bar → "Open in Max Editor"). The Max patcher editor opens, showing the device's visual programming layout. [13]
+3. **Edit** — Connect, disconnect, or modify Max objects visually in the patcher.
+4. **Toggle edit/performance mode** — Click the lock icon in the Max editor's bottom-left corner (or Cmd+E) to switch between edit mode (unlocked, for modifying the patcher) and performance mode (locked, for interacting with UI elements). [13]
+5. **Save** — Cmd+S in the Max editor writes back to the original file location on disk (your git repo). [13]
 
-1. **Load from repo** — Drag `liveql.amxd` from `/Users/mw/Documents/src/liveql/` into a track in Live, or add the folder to Live's browser "Places." Do NOT copy or "Save As" to the User Library.
-2. **File resolution** — Because the .amxd is loaded from the repo folder, Max finds `liveql-m4l.js` and `liveql-n4m.js` automatically via the same-folder search path rule. [4]
-3. **Edit JS in IDE** — Edit `.js` files in any editor. The `@watch 1` attribute on `node.script` auto-restarts the Node process when the file changes on disk. [7]
-4. **Save the patcher** — Cmd+S in the Max editor writes back to the same location on disk (the git repo). [13]
-5. **Install dependencies** — Click the `script npm install` button in the patcher to install from the updated `package.json`.
-6. **Disable "Keep Project Folder Organized"** — This is ON by default and will rearrange JS/JSON files into subfolders, breaking Node for Max. Disable it in the Project Inspector. [11] [14]
-7. **Do NOT freeze during development** — Freezing bundles everything into the .amxd and is only for distribution. [3]
+### Editing JS Files
+
+Edit `liveql-m4l.js` and `liveql-n4m.js` in any text editor or IDE. Because the .amxd is loaded from the same folder as the JS files, Max finds them automatically via the same-folder search path rule. [4]
+
+The `@watch 1` attribute on `node.script` means Max monitors `liveql-n4m.js` for changes and auto-restarts the Node process when the file is saved. No need to manually restart the script after editing. [7]
+
+For `liveql-m4l.js` (Max JS, not Node), changes are picked up when the `js` object is reloaded — either by sending it a `compile` message, toggling the script off/on, or reloading the device.
+
+### Installing Node Dependencies
+
+1. **Open the Max editor** — see step 2 above.
+2. **Switch to performance mode** — click the lock icon (bottom-left of Max editor) or press Cmd+E so the patcher is locked. Message boxes are only clickable in performance mode.
+3. **Click the `script npm install` message box** in the patcher. This runs npm in the same directory as `liveql-n4m.js`, installing dependencies from `package.json` into a `node_modules/` folder next to the script. [7] [10]
+4. **Check output** — npm stdout/stderr is routed to the Max Console. Open the Max Console from the Max editor sidebar (click the console icon, or Window → Max Console) to see install progress and errors. [7]
+
+### Starting the Node Script
+
+1. In the Max editor, switch to **performance mode** (lock icon or Cmd+E).
+2. Click the **`script start`** message box in the patcher. This starts the Node process running `liveql-n4m.js`. [7]
+3. Check the Max Console for startup logs (e.g., `liveql: loaded the liveql-n4m.js script`).
+4. To stop: click **`script stop`**. To check status: click **`script status`** or **`script running`**. [7]
+
+Note: the device has `@autostart 0`, so the Node script does not start automatically when the device loads. You must click `script start` manually. [7]
+
+### Do NOT Freeze During Development
+
+Freezing (snowflake icon in the Max editor toolbar) bundles all dependencies (JS files, `node_modules`, images) into the .amxd itself. This is for distribution only. During development, keep the device unfrozen so it reads files from disk. [3]
 
 ### Version Control
 
@@ -240,3 +288,7 @@ flowchart LR
     https://docs.cycling74.com/max8/vignettes/projects_settings
 15. Cycling ‘74 Forums (Max for Live and Git, AMXD file format, version control practices).
     https://cycling74.com/forums/max-for-live-and-git
+16. Cycling ‘74 Forums "My Max Project appears to delete files when opened" (autoorganize triggers on load, files moved not deleted).
+    https://cycling74.com/forums/my-max-project-appears-to-delete-files-when-opened
+17. Cycling ‘74 Forums "Stop a project from moving files around" (autoorganize moves files on every project open).
+    https://cycling74.com/forums/stop-a-project-from-moving-files-around
