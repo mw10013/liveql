@@ -1,6 +1,7 @@
+const http = require("http");
 const path = require("path");
 const Max = require("max-api");
-const { ApolloServer, gql } = require("apollo-server");
+const { createYoga, createSchema } = require("graphql-yoga");
 
 // This will be printed directly to the Max console
 Max.post(`liveql: loaded the ${path.basename(__filename)} script`);
@@ -72,7 +73,7 @@ Max.addHandler("result", async (json) => {
   }
 });
 
-const typeDefs = gql`
+const typeDefs = /* GraphQL */ `
   type Song {
     id: Int!
     path: String!
@@ -342,9 +343,13 @@ const resolvers = {
   },
 };
 
-const server = new ApolloServer({ typeDefs, resolvers });
+const yoga = createYoga({
+  schema: createSchema({ typeDefs, resolvers }),
+  graphqlEndpoint: "/",
+  maskedErrors: false,
+});
 
-// The `listen` method launches a web server.
-server.listen().then(({ url }) => {
-  console.log(`🚀  Server ready at ${url}`);
+const server = http.createServer(yoga);
+server.listen(4000, () => {
+  console.log("Server ready at http://localhost:4000");
 });
