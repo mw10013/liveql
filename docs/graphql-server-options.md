@@ -1,84 +1,63 @@
-# GraphQL Server Options (Reboot)
+# GraphQL Stack for Liveql
 
 Date: 2026-03-20
 
-This note focuses on simplicity of implementation for a local Max for Live + Node for Max GraphQL server. It compares modern, actively maintained options and ties the choice to this project's actual needs.
+## Context
 
-## Project needs (from current behavior)
-- Local-only GraphQL endpoint inside Node for Max.
-- Small, fixed operation set (notes, clip control, transport). No public API surface.
-- No auth, no federation, no gateway, no uploads, no multi-tenant requirements.
+Liveql is a local-only GraphQL server running inside Node for Max, exposing Ableton Live's LOM (Live Object Model) over GraphQL. No auth, no federation, no public API surface. The current implementation uses `apollo-server@^2.21.1` and `graphql@^15.5.0`, both significantly outdated.
 
-Given this, the most important driver is **implementation simplicity**: smallest dependency set, minimal setup, minimal configuration, and easy embedding in Node's built-in HTTP server.
+## Server: GraphQL Yoga v5
 
-## What "convenience" means here
-Convenience is the set of features that you would otherwise need to implement or wire up yourself, such as:
+GraphQL Yoga is the chosen server. It is actively maintained by The Guild, provides GraphiQL out of the box, and runs directly on Node's built-in HTTP server.
 
-- Built-in GraphiQL / landing page for testing.
-- CORS and CSRF handling.
-- Request parsing and validation caching.
-- Persisted operations or request batching.
-- Subscriptions (SSE or WebSocket) if you later want Live change events.
+- Source: https://the-guild.dev/graphql/yoga-server
+- GitHub: https://github.com/graphql-hive/graphql-yoga
+- Built-in GraphiQL, CORS, SSE subscriptions, request batching — all configurable.
+- Fetch API–based handler, runs on any JS runtime.
+- Replaces both `apollo-server` and its transitive dependencies.
 
-If none of these are required now, convenience is optional and not a reason to choose a larger server.
+Alternatives considered and rejected:
+- **graphql-http**: Smaller, but no built-in GraphiQL. Would require a separate UI dependency.
+- **Apollo Server v4–v5**: Larger footprint, Apollo-specific tooling we don't need.
+- **express-graphql**, **graphql-helix**: Both archived/deprecated.
 
-## Options
+## The `graphql` package
 
-### 1) graphql-http (minimal, spec-compliant)
-Source: https://github.com/graphql/graphql-http
+The [`graphql`](https://github.com/graphql/graphql-js) npm package is the JavaScript reference implementation of the GraphQL spec. It is the core engine that every GraphQL server in the JS ecosystem depends on. It provides:
 
-What it is:
-- Official GraphQL-over-HTTP reference implementation.
-- Zero dependencies and a small surface area.
+- **Schema definition** — `GraphQLSchema`, `GraphQLObjectType`, etc., plus the `buildSchema` / SDL parser.
+- **Query parsing and validation** — turns a query string into an AST, validates it against the schema.
+- **Execution** — resolves a validated query against your resolvers.
 
-Why it is simplest:
-- Minimal packages: `graphql` + `graphql-http`.
-- Integrates directly with Node's `http` server (no framework).
-- No extra server abstractions to learn or configure.
+GraphQL Yoga requires `graphql` as a **peer dependency** (`^15.2.0 || ^16.0.0`). It does not bundle its own copy — you install `graphql` alongside it. This is standard across the ecosystem; the peer-dep model prevents version conflicts that cause "Cannot use GraphQLSchema from another module" errors.
 
-What you must add yourself if needed:
-- GraphiQL UI (recommended add-on: `ruru`).
-- CORS/CSRF policy if you want anything beyond same-origin local use.
-- Subscriptions, file uploads, persisted ops, batching, etc.
+### Current usage in liveql
 
-### 2) GraphQL Yoga v5 (batteries-included, still framework-light)
-Source: https://the-guild.dev/graphql/yoga-server
+The existing code (`liveql-n4m.js:3`) imports only `gql` from `apollo-server`, which is just a re-export of `graphql-tag` — a tagged template literal that parses SDL strings into AST documents. The actual `graphql` package is used transitively by Apollo for schema building and query execution. We never import from `graphql` directly.
 
-What it is:
-- Fully featured server with a fetch-compatible handler.
-- Built-in GraphiQL and a large set of optional features.
+### Should we replace `graphql` with something else?
 
-Why it is convenient:
-- GraphiQL, CORS, CSRF prevention, persisted ops, request batching, response caching, SSE subscriptions are built-in and configurable.
-- Runs on Node's HTTP server or any Fetch-compatible runtime.
+**No.** The `graphql` package is not a choice among alternatives — it *is* the GraphQL runtime for JavaScript. Every JS server (Yoga, Apollo, graphql-http) uses it under the hood. There is no competing implementation of the spec in JS.
 
-Cost to simplicity:
-- More dependencies and feature surface than `graphql-http`.
-- More configuration options to understand (even if you leave them at defaults).
+The real question is: **how do you define your schema on top of `graphql`?**
 
-### 3) Apollo Server v4–v5 (ecosystem-heavy)
-Source: https://www.apollographql.com/docs/apollo-server/
+### Schema definition approaches
 
-What it is:
-- Full-featured server with integrations and Apollo-specific tooling.
+The current codebase uses **SDL-first** (schema definition language): a `gql` tagged template string defines types, then a separate `resolvers` object maps to those types. This is the simplest approach and works fine for our small, fixed schema.
 
-Why it is not the simplest:
-- Larger dependency footprint and more abstraction layers.
-- Best when you want Apollo tooling (GraphOS, plugins, gateway features).
+Other approaches exist, primarily for larger / more dynamic schemas:
 
-## Not recommended (maintenance status)
-- `express-graphql` is archived/deprecated. https://github.com/graphql/express-graphql
-- `graphql-helix` is archived. https://github.com/contra/graphql-helix
+| Approach | Library | What it does |
+|---|---|---|
+| **SDL-first** (current) | `graphql` + `graphql-tag` | Write SDL strings, wire up resolvers separately. Simple, readable. |
+| **Code-first** | [Pothos](https://pothos-graphql.dev/) | Build schema in TypeScript with full type inference. No SDL files, no codegen. |
+| **Code-first** | [Nexus](https://nexusjs.org/) | Similar to Pothos but less actively maintained. |
+| **Annotation-first** | [Grats](https://github.com/captbaritone/grats) | Derive schema from TypeScript types + JSDoc annotations. Zero-runtime overhead. |
+| **Decorator-first** | [TypeGraphQL](https://typegraphql.com/) | Uses TypeScript decorators. Heavier, more opinionated. |
 
-## Recommendation (based on simplicity)
+All of these produce a standard `GraphQLSchema` object that Yoga accepts. The choice is orthogonal to the server.
 
-### Primary recommendation: **GraphQL Yoga v5**
-Given the desire for a built-in IDE and long-term maintenance, Yoga is the best fit. It is actively maintained, provides GraphiQL out of the box, and avoids adding a separate IDE dependency.
+### Open questions
 
-### Secondary option: **graphql-http**
-Choose `graphql-http` only if you want the smallest possible dependency footprint and are comfortable adding a separate GraphiQL package or building a custom IDE page.
-
-## Decision summary
-- If **built-in UX and active maintenance** are important: **GraphQL Yoga v5**.
-- If **minimal dependencies** are the top driver and you can live without built-in GraphiQL: **graphql-http**.
-- Apollo Server is overkill for the current scope.
+- **Stay SDL-first or move to code-first?** SDL-first is fine for our current ~8 types and ~15 mutations. Code-first (Pothos) would add type safety but also complexity. Given that we're reimplementing anyway, is this worth exploring, or should we keep it simple?
+- **graphql v15 → v16?** Yoga supports both, but v16 has been current since 2021 and is actively maintained. v15 is in maintenance mode. The migration is mostly painless — recommend upgrading to `graphql@^16`.
