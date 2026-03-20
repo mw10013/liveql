@@ -41,30 +41,12 @@ The existing code (`liveql-n4m.js:3`) imports only `gql` from `apollo-server`, w
 
 The real question is: **how do you define your schema on top of `graphql`?**
 
-### Schema definition approaches
+### Schema definition: SDL-first
 
-The current codebase uses **SDL-first** (schema definition language): a `gql` tagged template string defines types, then a separate `resolvers` object maps to those types. This is the simplest approach and works fine for our small, fixed schema.
+The codebase is plain JavaScript with no TypeScript compilation step — this is a constraint of the Max for Live / Node for Max environment. Code-first schema builders (Pothos, Nexus, Grats, TypeGraphQL) are all TypeScript-oriented and not a fit here.
 
-Other approaches exist, primarily for larger / more dynamic schemas:
+**Decision: stay SDL-first.** Write SDL strings, wire up resolvers separately. This is the simplest approach, works well for our small fixed schema (~8 types, ~15 mutations), and requires no build tooling. Yoga's `createSchema` helper accepts SDL + resolvers directly — no need for a separate `graphql-tag` dependency.
 
-| Approach | Library | What it does |
-|---|---|---|
-| **SDL-first** (current) | `graphql` + `graphql-tag` | Write SDL strings, wire up resolvers separately. Simple, readable. |
-| **Code-first** | [Pothos](https://pothos-graphql.dev/) | Build schema in TypeScript with full type inference. No SDL files, no codegen. |
-| **Code-first** | [Nexus](https://nexusjs.org/) | Similar to Pothos but less actively maintained. |
-| **Annotation-first** | [Grats](https://github.com/captbaritone/grats) | Derive schema from TypeScript types + JSDoc annotations. Zero-runtime overhead. |
-| **Decorator-first** | [TypeGraphQL](https://typegraphql.com/) | Uses TypeScript decorators. Heavier, more opinionated. |
+### graphql version: upgrade to v16
 
-All of these produce a standard `GraphQLSchema` object that Yoga accepts. The choice is orthogonal to the server.
-
-### Open questions
-
-- **Stay SDL-first or move to code-first?** SDL-first is fine for our current ~8 types and ~15 mutations. Code-first (Pothos) would add type safety but also complexity. Given that we're reimplementing anyway, is this worth exploring, or should we keep it simple?
-
-In max4l, we'll only be able to use javascript so no typescript or type safety and that's fine. Not interested in compilation/transpiling build for typescript.
-
-We should stick with SDL?
-
-- **graphql v15 → v16?** Yoga supports both, but v16 has been current since 2021 and is actively maintained. v15 is in maintenance mode. The migration is mostly painless — recommend upgrading to `graphql@^16`.
-
-We would need to migrate to latest.
+**Decision: upgrade to `graphql@^16`.** v15 is in maintenance mode. v16 has been current since 2021, is actively maintained, and is required for the latest Yoga features. The migration from v15 is mostly painless (no breaking changes for typical SDL-first usage).
