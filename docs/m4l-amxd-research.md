@@ -1,6 +1,6 @@
 # Max for Live / AMXD Research
 
-Date: 2026-03-18
+Date: 2026-03-18 (updated 2026-03-20)
 
 ## Grounded Findings (From Sources)
 
@@ -51,7 +51,7 @@ Node for Max bundles its own Node.js binary — it does not use the system Node 
 
 - **Max 8.0 – 8.5.x**: Bundled Node.js v16.6.0 (EOL September 2023). [9]
 - **Max 8.6+**: Updated to Node.js v20.6 (LTS track). [9]
-- **Ableton Live 12**: Ships with Max 8.6+, so includes Node v20. [9]
+- **Ableton Live 12**: Ships with Max 9, which includes Node v20. [9] [12]
 - Node for Max tracks LTS releases of Node.js. [8]
 - You can override the bundled binary using `@node_bin_path` and `@npm_bin_path` attributes on `node.script`. Both should be changed together to avoid incompatibilities. [8]
 
@@ -85,6 +85,68 @@ Project-Name/
 - Since Max 8.0.3, Node for Max supports bundling `node_modules` inside frozen Max for Live devices. [11]
 - To make this work: place Node files (script, `package.json`, `node_modules`) in a dedicated subfolder, add it to the project's Search Paths with the "Embedded" option enabled, then freeze. [11]
 - For non-frozen distribution: ship `.js`, `package.json`, and `package-lock.json`, and have users run `script npm ci` to install dependencies. [11]
+
+## Max Versions and Live Compatibility (From Sources)
+
+| Ableton Live | Bundled Max Version |
+|---|---|
+| Live 10 | Max 8 |
+| Live 11 | Max 8 |
+| Live 12 | Max 9 |
+
+- Max 9 is backward-compatible with Max 8 patches — old .amxd devices open without manual migration. [12]
+- If a device is saved in Max 9, it may use newer serialization that makes it incompatible with Live 11 (Max 8). [12]
+- The Max editor bundled with Live is a limited version, not the full standalone Max application. Standalone Max 9 is a separate purchase from Cycling '74 (Ableton Suite owners get a discount). [12] [13]
+
+## "Keep Project Folder Organized" Setting (From Sources)
+
+This is a **per-project** setting in Max that automatically sorts files into category-based subfolders when files are added to a project or when the project is opened. **It is ON by default.** [14]
+
+When enabled, Max moves files into subfolders based on type:
+
+| Subfolder | File types moved there |
+|---|---|
+| `patchers/` | `.maxpat`, `.mxt`, `.pat`, `.maxhelp` |
+| `code/` | `.js`, `.java`, `.class`, `.lua`, `.glsl`, `.css`, `.xsl` |
+| `data/` | `.json`, `.xml`, `.yaml`, `.yml`, `.maxdict`, `.zip` |
+| `media/` | audio (`.wav`, `.aif`, `.mp3`), video (`.mov`, `.mp4`), images (`.png`, `.jpg`) |
+| `externals/` | `.mxo`, `.mxe`, `.mxe64` |
+| `other/` | anything else |
+
+**This breaks Node for Max projects.** Node.js requires `package.json`, `.js` files, and `node_modules` to be co-located. With the setting enabled, `.js` files get moved to `code/` and `package.json` gets moved to `data/`, which breaks `require()` resolution and the entire dependency chain. [11] [14]
+
+To disable: open the **Project Inspector** (gear menu in the Project window toolbar) and uncheck "Keep Project Folder Organized." This is the first best practice listed in the official Node for Max project documentation. [11] [14]
+
+## Development Workflow (Reasoned From Sources)
+
+### Backward Compatibility
+
+Old .amxd files open in Live 12 (Max 9) without manual migration. The .amxd format (binary header + JSON patcher + binary footer) has remained structurally stable across Max versions. Saving in Max 9 writes the current format; there is no explicit "upgrade" step. [12]
+
+### Editing the Device
+
+The .amxd cannot be meaningfully edited outside of Max/Live — the binary header contains checksums that would break if the file were modified externally. To edit: [13]
+
+1. Load the .amxd onto a track in Live (drag from Finder or the browser).
+2. Click **"Edit"** on the device title bar to open the Max editor.
+3. Edit the patcher visually. Cmd+S saves back to the original file location.
+
+### Working From the Git Repo
+
+The simplest development setup is to load the .amxd directly from the git repo folder: [4] [11]
+
+1. **Load from repo** — Drag `liveql.amxd` from `/Users/mw/Documents/src/liveql/` into a track in Live, or add the folder to Live's browser "Places." Do NOT copy or "Save As" to the User Library.
+2. **File resolution** — Because the .amxd is loaded from the repo folder, Max finds `liveql-m4l.js` and `liveql-n4m.js` automatically via the same-folder search path rule. [4]
+3. **Edit JS in IDE** — Edit `.js` files in any editor. The `@watch 1` attribute on `node.script` auto-restarts the Node process when the file changes on disk. [7]
+4. **Save the patcher** — Cmd+S in the Max editor writes back to the same location on disk (the git repo). [13]
+5. **Install dependencies** — Click the `script npm install` button in the patcher to install from the updated `package.json`.
+6. **Disable "Keep Project Folder Organized"** — This is ON by default and will rearrange JS/JSON files into subfolders, breaking Node for Max. Disable it in the Project Inspector. [11] [14]
+7. **Do NOT freeze during development** — Freezing bundles everything into the .amxd and is only for distribution. [3]
+
+### Version Control
+
+- `.amxd` files are mixed binary/JSON — git treats them as binary, so diffs are not human-readable. Track the .amxd for backup, but rely on the `.js` files for meaningful diffs. Treat .amxd changes as whole-file replacements. [15]
+- Some developers use external tools for readable Max patch diffs, but this is not standard practice. [15]
 
 ## Diagrams
 
@@ -169,3 +231,12 @@ flowchart LR
     https://docs.cycling74.com/max8/vignettes/02_n4m_usingnpm
 11. Cycling ‘74 “Node for Max - Working with Projects, Devices and Standalones” (project structure, freezing, bundling node_modules).
     https://docs.cycling74.com/max8/vignettes/03_n4m_projects_devices
+12. Ableton “Recommended Max versions” and “Supporting older Live versions with your M4L device” (Live/Max version mapping, backward compatibility).
+    https://help.ableton.com/hc/en-us/articles/209772305-Recommended-Max-versions
+    https://help.ableton.com/hc/en-us/articles/4406321223186-Supporting-older-Live-versions-with-your-Max-for-Live-device
+13. Ableton Live 12 Manual “Max for Live” (editing devices, saving, bundled vs standalone Max).
+    https://www.ableton.com/en/manual/max-for-live/
+14. Cycling ‘74 “Project Settings” (Keep Project Folder Organized: default on, per-project, file category sorting).
+    https://docs.cycling74.com/max8/vignettes/projects_settings
+15. Cycling ‘74 Forums (Max for Live and Git, AMXD file format, version control practices).
+    https://cycling74.com/forums/max-for-live-and-git
