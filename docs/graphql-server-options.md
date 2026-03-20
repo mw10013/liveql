@@ -60,4 +60,11 @@ All of these produce a standard `GraphQLSchema` object that Yoga accepts. The ch
 ### Open questions
 
 - **Stay SDL-first or move to code-first?** SDL-first is fine for our current ~8 types and ~15 mutations. Code-first (Pothos) would add type safety but also complexity. Given that we're reimplementing anyway, is this worth exploring, or should we keep it simple?
+
+In max4l, we'll only be able to use javascript so no typescript or type safety and that's fine. Not interested in compilation/transpiling build for typescript.
+
+We should stick with SDL?
+
 - **graphql v15 → v16?** Yoga supports both, but v16 has been current since 2021 and is actively maintained. v15 is in maintenance mode. The migration is mostly painless — recommend upgrading to `graphql@^16`.
+
+We would need to migrate to latest.
