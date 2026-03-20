@@ -62,7 +62,7 @@ server.listen().then(({ url }) => {
 ### After
 
 ```js
-const { createServer } = require("node:http");
+const http = require("http");
 const { createYoga, createSchema } = require("graphql-yoga");
 
 const typeDefs = /* GraphQL */ `
@@ -72,13 +72,13 @@ const typeDefs = /* GraphQL */ `
 
 const yoga = createYoga({
   schema: createSchema({ typeDefs, resolvers }),
-  logging: true,
-  graphiql: true,
+  graphqlEndpoint: "/",
+  maskedErrors: false,
 });
 
-const server = createServer(yoga);
+const server = http.createServer(yoga);
 server.listen(4000, () => {
-  console.log(`Server ready at http://localhost:4000/graphql`);
+  console.log(`Server ready at http://localhost:4000`);
 });
 ```
 
@@ -88,46 +88,25 @@ server.listen(4000, () => {
 
 2. **`createYoga(options)`** — returns a Fetch API–compatible handler that doubles as a Node `http.RequestListener`. Pass it directly to `http.createServer()`.
 
-3. **Default endpoint is `/graphql`** — configurable via `graphqlEndpoint` option. Apollo defaulted to `/` (root). This will change the URL clients use. Options:
-   - Accept the new `/graphql` default (cleaner)
-   - Set `graphqlEndpoint: "/"` to preserve the old behavior
-   - **Decision needed: which endpoint path?**
+3. **Endpoint**: `graphqlEndpoint: "/"` to preserve Apollo's root path.
 
-4. **Default port** — Apollo's `server.listen()` defaulted to port 4000. We should keep 4000 for continuity. Yoga doesn't pick a default port; you pass it to `server.listen(port)`.
+4. **Port**: 4000, passed explicitly to `server.listen(4000)`.
 
-5. **GraphiQL** — built in, enabled by default. Accessible at the `graphqlEndpoint` via browser GET request. No extra config needed.
+5. **GraphiQL** — built in, enabled by default. Accessible at the endpoint via browser GET request.
 
-6. **CORS** — enabled by default with permissive settings. For local-only use this is fine.
+6. **CORS** — enabled by default with permissive settings. Fine for local-only use.
 
-7. **Error masking** — Yoga masks unexpected errors by default (`maskedErrors: true`). For local dev, we may want to disable this so resolver errors surface clearly:
-   - **Decision needed: `maskedErrors: false` for local dev?**
+7. **Error masking** — disabled (`maskedErrors: false`). Local-only, no security benefit.
 
 8. **Parser/validation caching** — enabled by default (LRU cache). Free performance win.
 
-## Open Questions
+## Resolved Decisions
 
-1. **Endpoint path**: Keep Apollo's `/` or adopt Yoga's `/graphql` default? Any downstream consumers (Max patches, scripts) that hardcode the URL?
-
-`/`
-
-2. **Error masking**: Disable for local dev (`maskedErrors: false`) so LOM errors propagate clearly to GraphiQL? There's no production deployment, so masking provides no security benefit.
-
-disable
-
-3. **Port**: Confirm port 4000. Is anything else using it on the dev machine?
-
-confirmed
-
-4. **`node:http` availability**: Node for Max bundles a specific Node version. `node:http` (with the `node:` prefix) requires Node 16+. If the bundled Node is older, use `require("http")` instead. Need to confirm Node for Max's Node version.
-   - Fallback: `require("http")` works on all Node versions.
-
-check docs/m4l-amxd-research.md about node version.   
-
-5. **Logging**: Yoga accepts `logging: true | false | LogLevel | YogaLogger`. The current code logs to Max console via `Max.post()`. Should we wire Yoga's logger to `Max.post()` instead of default `console.*`?
-   - Option: `logging: { debug: Max.post, info: Max.post, warn: Max.post, error: Max.post }`
-   - Or just leave default (`console.*`) since Node for Max routes stdout to Max console anyway.
-
-   leave default
+1. **Endpoint path**: `graphqlEndpoint: "/"` — preserve Apollo's root path for existing consumers.
+2. **Error masking**: `maskedErrors: false` — local-only, no security benefit from masking.
+3. **Port**: 4000 (confirmed).
+4. **`http` import**: `require("http")` (no `node:` prefix) — Node for Max bundles v16 (Max 8.0–8.5) or v20 (Max 8.6+/Live 12). Both support `node:` prefix, but plain `require("http")` is safer across all versions.
+5. **Logging**: Default (`console.*`) — Node for Max routes stdout/stderr to Max console already.
 
 ## Risk Assessment
 
