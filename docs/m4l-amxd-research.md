@@ -43,6 +43,49 @@ Observed UI text in the patch:
 
 - A comment reads: “Just once, you’ll need to install express.” This matches the presence of the `script npm install` button, but note that the current repo’s `package.json` uses `apollo-server` and `graphql` (not `express` directly), so this may be legacy wording rather than authoritative.
 
+## Node for Max Runtime (From Sources)
+
+### Bundled Node.js Version
+
+Node for Max bundles its own Node.js binary — it does not use the system Node installation. [8]
+
+- **Max 8.0 – 8.5.x**: Bundled Node.js v16.6.0 (EOL September 2023). [9]
+- **Max 8.6+**: Updated to Node.js v20.6 (LTS track). [9]
+- **Ableton Live 12**: Ships with Max 8.6+, so includes Node v20. [9]
+- Node for Max tracks LTS releases of Node.js. [8]
+- You can override the bundled binary using `@node_bin_path` and `@npm_bin_path` attributes on `node.script`. Both should be changed together to avoid incompatibilities. [8]
+
+### How `package.json` and `node_modules` Work
+
+- `script npm install` sent to a `node.script` object runs npm **in the same directory as the script file** referenced by the object's first argument. [10]
+- `package.json` must be in that same directory. You can generate one with `script npm init`. [10]
+- `node_modules` is created next to the script file and `package.json`, not relative to the patcher. [10]
+- `package-lock.json` is also generated in that directory. [10]
+- `script npm install` (no package name) reinstalls all dependencies from `package-lock.json`, falling back to `package.json` if the lock file doesn't exist. [10]
+
+### Recommended Project Structure
+
+Cycling '74 recommends placing Node content in a dedicated subfolder separate from patchers: [11]
+
+```
+Project-Name/
+  patchers/
+    main.maxpat
+  node_content/
+    script.js
+    package.json
+    package-lock.json
+    node_modules/
+```
+
+**Important:** Disable "Keep Project Folder Organized" in Max project settings — otherwise Max will move `.js` files into `code/` and `.json` files into `data/`, breaking the Node directory structure. [11]
+
+### Distributing `node_modules` in Frozen Devices
+
+- Since Max 8.0.3, Node for Max supports bundling `node_modules` inside frozen Max for Live devices. [11]
+- To make this work: place Node files (script, `package.json`, `node_modules`) in a dedicated subfolder, add it to the project's Search Paths with the "Embedded" option enabled, then freeze. [11]
+- For non-frozen distribution: ship `.js`, `package.json`, and `package-lock.json`, and have users run `script npm ci` to install dependencies. [11]
+
 ## Diagrams
 
 ### AMXD Device Patcher (Internal Wiring)
@@ -116,5 +159,13 @@ flowchart LR
    https://docs.cycling74.com/legacy/max8/vignettes/javascript_usage_topic
 6. Cycling ’74 “Node for Max API” (Node.js via `node.script`, `max-api` module).
    https://docs.cycling74.com/apiref/nodeformax/
-7. Cycling ’74 “node.script” reference (script messages, npm integration, process control).
+7. Cycling ‘74 “node.script” reference (script messages, npm integration, process control).
    https://docs.cycling74.com/reference/node.script/
+8. Cycling ‘74 “Node for Max - Custom Binaries” (bundled Node version, LTS tracking, overriding binaries).
+   https://docs.cycling74.com/max8/vignettes/09_n4m_custombinaries
+9. Cycling ‘74 Forums “Bundled Node.js Version End of Life” (version history: v16 in Max 8.0–8.5, v20 in Max 8.6+).
+   https://cycling74.com/forums/bundled-nodejs-version-end-of-life-on-2023-09-11
+10. Cycling ‘74 “Node for Max - Using npm” (npm install behavior, package.json location, node_modules).
+    https://docs.cycling74.com/max8/vignettes/02_n4m_usingnpm
+11. Cycling ‘74 “Node for Max - Working with Projects, Devices and Standalones” (project structure, freezing, bundling node_modules).
+    https://docs.cycling74.com/max8/vignettes/03_n4m_projects_devices
