@@ -31,9 +31,10 @@ Prerequisites: open the device in Live, click the wrench icon to open the Max ed
    - **Short Name** → `Start` (this is the text displayed on the button)
 
 2. **Create the `live.numbox`.** Double-click on the canvas below the button. Type `live.numbox` and press Enter. Open the Inspector and set:
-   - **Range** → min `1024`, max `65535`
-   - **Initial Enable** → on, **Initial** → `4000` (default port on fresh load)
-   - **Type** → `Int`
+   - **Type** → `Float` (Int type is capped at 256 values, too small for port numbers)
+   - **Unit Style** → `Int` (displays as whole numbers despite Float type)
+   - **Range/Enum** → `1024 65535`
+   - **Initial Enable** → on, **Initial Value** → `4000` (default port on fresh load)
 
 3. **Create the `prepend` object.** Double-click below the numbox. Type `prepend script start` and press Enter.
 
@@ -69,4 +70,4 @@ To get per-Live-Set persistence, the number box needs to participate in Live's p
 
 ### Validation
 
-The number box constrains the range to valid port numbers (e.g., `@minimum 1024 @maximum 65535`). The Node script handles runtime errors — if the port is already in use, `server.listen` emits an error that routes to the Max Console via stderr.
+The `live.numbox` constrains input to 1024–65535. The Node script handles runtime errors — if the port is already in use, `server.listen` emits an error that routes to the Max Console via stderr.
