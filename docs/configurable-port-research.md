@@ -13,9 +13,9 @@ Port is hard-coded to 4000 in `liveql-n4m.js` (line 353).
 ### Patcher
 
 ```
-[button]                        ← user clicks to start
+[live.text "Start" @mode 0]    ← labeled button, outputs bang on click
     |
-[number box: 4000]             ← banged, re-outputs its current value
+[live.numbox: 4000]            ← banged, re-outputs its current value
     |
 [prepend script start]         ← turns 4000 into "script start 4000"
     |
