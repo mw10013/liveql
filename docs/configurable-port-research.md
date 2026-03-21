@@ -22,6 +22,27 @@ Port is hard-coded to 4000 in `liveql-n4m.js` (line 353).
 [node.script liveql-n4m.js @autostart 0 @watch 1]
 ```
 
+#### Step-by-step: building this in the Max editor
+
+Prerequisites: open the device in Live, click the wrench icon to open the Max editor, and make sure you're in **edit mode** (Cmd+E or click the lock icon in the bottom-left — unlocked = edit mode).
+
+1. **Create the `live.text` button.** Double-click on an empty area of the patcher canvas. Type `live.text` and press Enter. Select the object, open the Inspector (Cmd+I or click the Inspector icon in the sidebar). Set:
+   - **Mode** → `Button` (so it outputs a bang on click, not a toggle)
+   - **Short Name** → `Start` (this is the text displayed on the button)
+
+2. **Create the `live.numbox`.** Double-click on the canvas below the button. Type `live.numbox` and press Enter. Open the Inspector and set:
+   - **Range** → min `1024`, max `65535`
+   - **Initial Enable** → on, **Initial** → `4000` (default port on fresh load)
+   - **Type** → `Int`
+
+3. **Create the `prepend` object.** Double-click below the numbox. Type `prepend script start` and press Enter.
+
+4. **Wire them together.** Click the outlet (bottom) of `live.text` and drag to the inlet (top) of `live.numbox`. Then click the outlet of `live.numbox` and drag to the inlet of `prepend`. Finally, wire the outlet of `prepend` to an inlet of the existing `node.script` object.
+
+5. **Remove the old `script start` message box.** Click the old `script start` message box, press Delete. If it was wired to `node.script`, that connection is removed automatically.
+
+6. **Save the device.** Cmd+S in the Max editor.
+
 ### Node side
 
 ```js
