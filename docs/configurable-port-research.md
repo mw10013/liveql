@@ -30,19 +30,21 @@ Prerequisites: open the device in Live, click the wrench icon to open the Max ed
    - **Mode** → `Button` (so it outputs a bang on click, not a toggle)
    - **Short Name** → `Start` (this is the text displayed on the button)
 
-2. **Create the `live.numbox`.** Double-click on the canvas below the button. Type `live.numbox` and press Enter. Open the Inspector and set:
+2. **Create a "Port" label.** Double-click on the canvas. Type `comment Port` and press Enter. Position it next to where the numbox will go.
+
+3. **Create the `live.numbox`.** Double-click on the canvas below the button. Type `live.numbox` and press Enter. Open the Inspector and set:
    - **Type** → `Float` (Int type is capped at 256 values, too small for port numbers)
    - **Unit Style** → `Int` (displays as whole numbers despite Float type)
    - **Range/Enum** → `1024 65535`
    - **Initial Enable** → on, **Initial Value** → `4000` (default port on fresh load)
 
-3. **Create the `prepend` object.** Double-click below the numbox. Type `prepend script start` and press Enter.
+4. **Create the `prepend` object.** Double-click below the numbox. Type `prepend script start` and press Enter.
 
-4. **Wire them together.** Click the outlet (bottom) of `live.text` and drag to the inlet (top) of `live.numbox`. Then click the outlet of `live.numbox` and drag to the inlet of `prepend`. Finally, wire the outlet of `prepend` to an inlet of the existing `node.script` object.
+5. **Wire them together.** Click the outlet (bottom) of `live.text` and drag to the inlet (top) of `live.numbox`. Then click the outlet of `live.numbox` and drag to the inlet of `prepend`. Finally, wire the outlet of `prepend` to an inlet of the existing `node.script` object.
 
-5. **Remove the old `script start` message box.** Click the old `script start` message box, press Delete. If it was wired to `node.script`, that connection is removed automatically.
+6. **Remove the old `script start` message box.** Click the old `script start` message box, press Delete. If it was wired to `node.script`, that connection is removed automatically.
 
-6. **Save the device.** Cmd+S in the Max editor.
+7. **Save the device.** Cmd+S in the Max editor.
 
 ### Node side
 
