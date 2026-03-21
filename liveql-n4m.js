@@ -349,7 +349,9 @@ const yoga = createYoga({
   maskedErrors: false,
 });
 
+const port = parseInt(process.argv[2]) || 4000;
+
 const server = http.createServer(yoga);
-server.listen(4000, () => {
-  console.log("Server ready at http://localhost:4000");
+server.listen(port, () => {
+  Max.post(`liveql: server ready at http://localhost:${port}`);
 });

@@ -70,6 +70,38 @@ There are two kinds of persistence in Max for Live:
 
 To get per-Live-Set persistence, the number box needs to participate in Live's parameter system. Use `live.numbox` (which has parameter support built in) or a regular number box bound to a `pattr` with `@parameter_enable 1`. `autopattr` does NOT work here — it saves into the .amxd, not the .als.
 
+### Known issue: bpatcher position lost after save (n4m.monitor)
+
+The `n4m.monitor` bpatcher (node.script debug tool) disappears from the device UI after editing and saving in the Max editor. It works on first load but its `presentation_rect` is not persisted reliably across save/load cycles. This is a known Max bug — the bpatcher's presentation position gets reset or lost when the device is saved.
+
+References:
+- https://cycling74.com/forums/presentation-rectangle-attributes-of-bpatcher
+- https://cycling74.com/forums/bpatcher-and-rect
+- https://cycling74.com/forums/max-for-live-device-width-and-created-objects-forgotten
+
+**Workaround:** Use `loadbang` + `thispatcher` to force the bpatcher's position on every device load.
+
+```
+[loadbang]
+    |
+[message: script sendbox monitor presentation_rect <x> <y> <width> <height>]
+    |
+[thispatcher]
+```
+
+#### Step-by-step fix
+
+1. **Switch to patching mode** (Cmd+E if you're in presentation mode).
+2. **Give the n4m.monitor bpatcher a scripting name.** Select it, open the Inspector (Cmd+I), set **Scripting Name** to `monitor`.
+3. **Get its presentation_rect values.** In the same Inspector, find **Presentation Rectangle** — note the four values: x, y, width, height.
+4. **Create a `loadbang` object.** Double-click on the canvas, type `loadbang`, press Enter.
+5. **Create a `message` box.** Double-click on the canvas, type `script sendbox monitor presentation_rect <x> <y> <width> <height>` using the values from step 3. Press Enter.
+6. **Create a `thispatcher` object.** Double-click on the canvas, type `thispatcher`, press Enter.
+7. **Wire them together.** `loadbang` outlet → `message` inlet → `thispatcher` inlet.
+8. **Save the device.** Cmd+S.
+
+These three objects are internal plumbing — do NOT add them to presentation mode. They run silently on load and force the monitor bpatcher to its correct position every time.
+
 ### Validation
 
 The `live.numbox` constrains input to 1024–65535. The Node script handles runtime errors — if the port is already in use, `server.listen` emits an error that routes to the Max Console via stderr.
