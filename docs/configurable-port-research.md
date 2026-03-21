@@ -39,7 +39,12 @@ Change the number, click start again. `script start` while already running termi
 
 ### Persisting the port value
 
-Give the number box a scripting name (e.g., `port`) and drop an `autopattr` object in the patcher. Max saves/recalls the value automatically when the device is saved.
+There are two kinds of persistence in Max for Live:
+
+- **Saving the .amxd** (Cmd+S in Max editor) saves the device implementation — shared by all instances everywhere. This is for changing the device itself, not for per-user settings.
+- **Saving the Live Set** (.als) saves per-instance parameter values. The same device can be on multiple tracks in multiple Live Sets, each with a different port number. Live recalls each instance's value when the Set is reopened.
+
+To get per-Live-Set persistence, the number box needs to participate in Live's parameter system. Use `live.numbox` (which has parameter support built in) or a regular number box bound to a `pattr` with `@parameter_enable 1`. `autopattr` does NOT work here — it saves into the .amxd, not the .als.
 
 ### Validation
 
