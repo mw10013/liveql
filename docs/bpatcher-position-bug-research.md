@@ -26,15 +26,17 @@ Reference: https://cycling74.com/forums/renaming-a-bpatchers-script-name
 
 The idea: the bpatcher docs list `@varname` as a supported attribute. Setting it directly in the object box text (e.g., `bpatcher @name n4m.monitor.maxpat @varname monitor`) should make it part of the object definition and persist across saves.
 
-Reference: https://docs.cycling74.com/legacy/max8/refpages/bpatcher
+Reference: https://docs.cycling74.com/reference/bpatcher/
 
 **Result: Not tested.** Unclear how to edit the bpatcher's object box text in the Max editor — the bpatcher UI doesn't expose an editable text field the way regular objects do.
 
 ### 4. JavaScript workaround (fix-monitor-position.js)
 
-The idea: a `js` object wired to `live.thisdevice` that iterates through all patcher objects using `firstobject`/`nextobject`, finds the bpatcher by `maxclass`, assigns `varname` at runtime, then calls `script sendbox` to force its `presentation_rect`.
+The idea: a `js` object wired to `live.thisdevice` that iterates through all patcher objects using `Patcher.firstobject` / `Maxobj.nextobject`, finds the bpatcher by `maxclass`, assigns `varname` at runtime, then calls `script sendbox` to force its `presentation_rect`.
 
-Reference: https://docs.cycling74.com/legacy/max8/vignettes/jspatcherobject
+References:
+- Patcher JS API: https://docs.cycling74.com/apiref/js/patcher/
+- Maxobj JS API: https://docs.cycling74.com/apiref/js/maxobj/
 
 **Result: Not tested.** Rejected as too hacky — adds a separate JS file as a workaround for a Max bug.
 
@@ -50,7 +52,7 @@ bpatcher `presentation_rect` and `varname` do not persist reliably across save/l
 ## Other Context
 
 - The device height in Ableton Live is fixed at 169 pixels. The n4m.monitor bpatcher is taller than this, but partially visible if positioned near the top.
-- `live.thisdevice` fires both on first load and after returning from the Max editor (unlike `loadbang` which only fires once).
+- `live.thisdevice` fires both on first load and after returning from the Max editor (unlike `loadbang` which only fires once). Reference: https://docs.cycling74.com/reference/live.thisdevice/
 - The Max editor has two modes: **patching mode** (for wiring) and **presentation mode** (what Live shows). Objects must be explicitly added to presentation (right-click → "Add to Presentation"). The patcher itself must have "Open in Presentation" enabled (deselect all objects → Inspector → check "Open in Presentation") or Live shows patch cords.
 
 ## Status
@@ -58,6 +60,6 @@ bpatcher `presentation_rect` and `varname` do not persist reliably across save/l
 **Unresolved.** No clean fix found. Options going forward:
 
 1. **Accept the bug.** Keep the monitor in the patcher for development use (visible in the Max editor) but don't rely on it appearing in Live's device view after edits. Use the Max Console for debugging output instead.
-2. **Revisit the JS workaround.** It's hacky but the API supports it — `firstobject`/`nextobject` iteration, settable `varname`, and `script sendbox` for repositioning.
+2. **Revisit the JS workaround.** It's hacky but the API supports it — `Patcher.firstobject` / `Maxobj.nextobject` iteration, settable `varname`, and `script sendbox` for repositioning.
 3. **File a bug with Cycling '74.** The scripting name not persisting on a bpatcher seems like a genuine bug.
 4. **Try @varname in the object box.** Needs more investigation on how to actually edit a bpatcher's object box text.

@@ -72,33 +72,7 @@ To get per-Live-Set persistence, the number box needs to participate in Live's p
 
 ### Known issue: bpatcher position lost after save (n4m.monitor)
 
-The `n4m.monitor` bpatcher (node.script debug tool) disappears from the device UI after editing and saving in the Max editor. It works on first load but its `presentation_rect` is not persisted reliably across save/load cycles. This is a known Max bug — the bpatcher's presentation position gets reset or lost when the device is saved.
-
-References:
-- https://cycling74.com/forums/presentation-rectangle-attributes-of-bpatcher
-- https://cycling74.com/forums/bpatcher-and-rect
-- https://cycling74.com/forums/max-for-live-device-width-and-created-objects-forgotten
-
-**Workaround:** Use a JavaScript file (`fix-monitor-position.js`) that runs on every device load/return-from-editor. It finds the bpatcher by its `maxclass`, assigns it a `varname` at runtime, and forces its `presentation_rect`. This bypasses the persistence bug entirely — no need to set the scripting name in the Inspector.
-
-```
-[live.thisdevice]
-    |
-[js fix-monitor-position.js]
-```
-
-The JS file (`fix-monitor-position.js` in the repo root) iterates through the patcher's objects, finds the bpatcher, and repositions it. Edit the coordinate constants at the top of the file to match your layout.
-
-#### Step-by-step fix
-
-1. **Switch to patching mode** (Cmd+E if you're in presentation mode).
-2. **Note the n4m.monitor's presentation_rect.** Select the bpatcher, open the Inspector (Cmd+I), find **Presentation Rectangle** — note the four values: x, y, width, height.
-3. **Edit `fix-monitor-position.js`** (in the repo root). Update the `MONITOR_X`, `MONITOR_Y`, `MONITOR_W`, `MONITOR_H` constants to match the values from step 2.
-4. **Create a `js` object.** Double-click on the canvas, type `js fix-monitor-position.js`, press Enter.
-5. **Wire it up.** If you already have a `live.thisdevice` object, wire its left outlet to the `js` object's inlet. If not, create one first (double-click, type `live.thisdevice`, press Enter), then wire its left outlet to the `js` object's inlet.
-6. **Save the device.** Cmd+S.
-
-These objects are internal plumbing — do NOT add them to presentation mode. The JS runs silently on every load and after every edit/save, forcing the monitor to its correct position.
+See `docs/bpatcher-position-bug-research.md` for full details. The n4m.monitor bpatcher disappears from the device UI after editing and saving. This is an unresolved Max bug.
 
 ### Validation
 
