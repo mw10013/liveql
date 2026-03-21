@@ -79,10 +79,10 @@ References:
 - https://cycling74.com/forums/bpatcher-and-rect
 - https://cycling74.com/forums/max-for-live-device-width-and-created-objects-forgotten
 
-**Workaround:** Use `loadbang` + `thispatcher` to force the bpatcher's position on every device load.
+**Workaround:** Use `live.thisdevice` + `thispatcher` to force the bpatcher's position every time the device loads or returns from the editor. (`loadbang` only fires once on first load — `live.thisdevice` also fires after edit/save in the Max editor.)
 
 ```
-[loadbang]
+[live.thisdevice]
     |
 [message: script sendbox monitor presentation_rect <x> <y> <width> <height>]
     |
@@ -94,10 +94,10 @@ References:
 1. **Switch to patching mode** (Cmd+E if you're in presentation mode).
 2. **Give the n4m.monitor bpatcher a scripting name.** Select it, open the Inspector (Cmd+I), set **Scripting Name** to `monitor`.
 3. **Get its presentation_rect values.** In the same Inspector, find **Presentation Rectangle** — note the four values: x, y, width, height.
-4. **Create a `loadbang` object.** Double-click on the canvas, type `loadbang`, press Enter.
-5. **Create a `message` box.** Double-click on the canvas, type `script sendbox monitor presentation_rect <x> <y> <width> <height>` using the values from step 3. Press Enter.
+4. **Create a `live.thisdevice` object.** Double-click on the canvas, type `live.thisdevice`, press Enter.
+5. **Create a `message` box.** Press **M** on the canvas (do not double-click — that creates a regular object). A message box appears with a distinct border and has an inlet/outlet. Click inside it and type `script sendbox monitor presentation_rect <x> <y> <width> <height>` using the values from step 3.
 6. **Create a `thispatcher` object.** Double-click on the canvas, type `thispatcher`, press Enter.
-7. **Wire them together.** `loadbang` outlet → `message` inlet → `thispatcher` inlet.
+7. **Wire them together.** `live.thisdevice` left outlet → `message` inlet → `thispatcher` inlet.
 8. **Save the device.** Cmd+S.
 
 These three objects are internal plumbing — do NOT add them to presentation mode. They run silently on load and force the monitor bpatcher to its correct position every time.
