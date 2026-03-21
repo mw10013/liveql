@@ -1,16 +1,18 @@
+// declare inlet/outlet count for the v8 object in the patcher
+// bare globals — let/const breaks v8 attribute binding
 inlets = 1;
 outlets = 1;
 
 function getLive(idOrPath) {
-  var live = new LiveAPI(
-    typeof idOrPath === "string" ? idOrPath : "id " + idOrPath
+  const live = new LiveAPI(
+    typeof idOrPath === "string" ? idOrPath : `id ${idOrPath}`,
   );
   if (live.path === "") {
-    throw "Invalid live id or path: " + idOrPath;
+    throw `Invalid live id or path: ${idOrPath}`;
   }
   return live;
 }
-getLive.local = 1;
+getLive.local = 1; // prevent Max from exposing as a message handler
 
 function outletSuccessfulResult(actionId, data) {
   outlet(
@@ -18,9 +20,9 @@ function outletSuccessfulResult(actionId, data) {
     "result",
     JSON.stringify({
       status: "succeeded",
-      actionId: actionId,
-      data: data,
-    })
+      actionId,
+      data,
+    }),
   );
 }
 outletSuccessfulResult.local = 1;
@@ -31,46 +33,45 @@ function outletFailedResult(actionId, message) {
     "result",
     JSON.stringify({
       status: "failed",
-      actionId: actionId,
+      actionId,
       message: message.toString(),
-    })
+    }),
   );
 }
-outletFailedResult.local = 1;
+outletFailedResult.local = 1; // prevent Max from exposing as a message handler
 
 function get(json) {
-  var actionId = null;
+  let actionId = null;
   try {
-    var params = JSON.parse(json);
+    const params = JSON.parse(json);
     actionId = params.actionId;
-    var live = getLive(params.idOrPath);
+    const live = getLive(params.idOrPath);
 
-    var o = {
+    const o = {
       id: parseInt(live.id), // LOM says this should be number instead of string
       path: live.unquotedpath,
       type: live.type,
     };
-    (params.propertyKeysSingle || []).forEach(function (k) {
-      var propertyArr = live.get(k);
+
+    for (const k of params.propertyKeysSingle || []) {
+      const propertyArr = live.get(k);
       if (propertyArr.length === 1) {
         o[k] = propertyArr[0];
       }
-    });
+    }
 
-    (params.propertyKeysMultiple || []).forEach(function (k) {
+    for (const k of params.propertyKeysMultiple || []) {
       o[k] = live.get(k);
-    });
+    }
 
-    (params.childKeysSingle || []).forEach(function (k) {
+    for (const k of params.childKeysSingle || []) {
       const id = live.get(k)[1];
       o[k] = id === 0 ? null : id;
-    });
+    }
 
-    (params.childKeysMultiple || []).forEach(function (k) {
-      o[k] = live.get(k).filter(function (v) {
-        return v !== "id";
-      });
-    });
+    for (const k of params.childKeysMultiple || []) {
+      o[k] = live.get(k).filter((v) => v !== "id");
+    }
 
     outletSuccessfulResult(actionId, o);
   } catch (err) {
@@ -79,12 +80,12 @@ function get(json) {
 }
 
 function set(json) {
-  var actionId = null;
+  let actionId = null;
   try {
-    var params = JSON.parse(json);
+    const params = JSON.parse(json);
     actionId = params.actionId;
-    var live = getLive(params.idOrPath);
-    var data = live.set(params.property, params.value);
+    const live = getLive(params.idOrPath);
+    const data = live.set(params.property, params.value);
     outletSuccessfulResult(actionId, data);
   } catch (err) {
     outletFailedResult(actionId, err);
@@ -92,12 +93,12 @@ function set(json) {
 }
 
 function call(json) {
-  var actionId = null;
+  let actionId = null;
   try {
-    var params = JSON.parse(json);
+    const params = JSON.parse(json);
     actionId = params.actionId;
-    var live = getLive(params.idOrPath);
-    var data = live.call(params.args);
+    const live = getLive(params.idOrPath);
+    const data = live.call(params.args);
     outletSuccessfulResult(actionId, data);
   } catch (err) {
     outletFailedResult(actionId, err);
