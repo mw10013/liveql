@@ -41,7 +41,6 @@ Change the number, click start again. `script start` while already running termi
 
 Give the number box a scripting name (e.g., `port`) and drop an `autopattr` object in the patcher. Max saves/recalls the value automatically when the device is saved.
 
-## Open Questions
+### Validation
 
-- Should we keep the old `script start` message box as-is (starts on default 4000), or replace it with the parameterized version?
-- Do we want to validate the port / show an error if it's already in use? Node's `server.listen` will emit an error event that routes to the Max Console via stderr, so we get that for free.
+The number box constrains the range to valid port numbers (e.g., `@minimum 1024 @maximum 65535`). The Node script handles runtime errors — if the port is already in use, `server.listen` emits an error that routes to the Max Console via stderr.
