@@ -46,21 +46,71 @@ The documented and supported approach is to send `script npm install` to the sam
 
 - **Functional impact: none.** The main `node.script liveql-n4m.js` object works correctly. The server starts and runs as expected.
 - **The "script npm install" button is broken.** Clicking it produces the same errors because it routes to the broken `node.script .` object.
-- **Workaround:** Run `npm install` from the terminal in the repo directory instead of using the Max button.
+- **Error on every load.** The `node.script .` object initializes when the device opens, so the error appears even without clicking anything.
 
-## Fix Options
+## Fix: Route npm install to the main node.script object
 
-### Option A: Route npm install to the main node.script object
+The `node.script` docs say `script npm install` runs npm **in the same directory as the script's first argument**. [5] [6] Since `package.json` is co-located with `liveql-n4m.js`, there is no need for a separate `node.script .` object — the main object can handle both running the server AND installing dependencies.
 
-In the Max editor, rewire the "script npm install" message box to send directly to `node.script liveql-n4m.js` instead of routing through `p npm`. The main object's script argument points to `liveql-n4m.js`, and `package.json` is in the same directory, so `script npm install` will work correctly. The `p npm` subpatcher can then be deleted.
+### Current wiring (broken)
 
-### Option B: Delete the npm subpatcher entirely
+The "script npm install" message box routes into a separate `p npm` subpatcher containing its own `node.script .` object. This second object fails to initialize in Max 9.
 
-Remove the `p npm` subpatcher and the "script npm install" message box from the device. Document that `npm install` should be run from the terminal. This eliminates the error on load.
+```mermaid
+flowchart LR
+  subgraph CURRENT["Current (broken)"]
+    NPMI["script npm install"]
+    subgraph P_NPM["p npm"]
+      DOT["node.script ."]
+      ROUTE_NPM["route npm → route success"]
+      DOT -->|"stdout"| ROUTE_NPM
+    end
+    NPMI --> P_NPM
 
-### Option C: Leave as-is
+    START["script start"] --> MAIN["node.script liveql-n4m.js
+    @autostart 0 @watch 1"]
+  end
 
-The error is cosmetic. The main script works. The npm button was already a convenience feature, and running npm from the terminal is standard practice.
+  style DOT fill:#f66,stroke:#900,color:#fff
+  style P_NPM fill:#fdd,stroke:#900
+```
+
+### Fixed wiring
+
+Delete the `p npm` subpatcher. Wire the "script npm install" message box directly to the main `node.script liveql-n4m.js` object. Both `script start` and `script npm install` go to the same object.
+
+```mermaid
+flowchart LR
+  subgraph FIXED["Fixed"]
+    NPMI["script npm install"]
+    START["script start"]
+    MAIN["node.script liveql-n4m.js
+    @autostart 0 @watch 1"]
+    ROUTE["route stdout stderr"]
+    OUT["print stdout / stderr"]
+
+    NPMI --> MAIN
+    START --> MAIN
+    MAIN --> ROUTE --> OUT
+  end
+
+  style MAIN fill:#6b6,stroke:#090,color:#fff
+```
+
+### Steps to apply in the Max editor
+
+1. Open the device in the Max editor (wrench icon).
+2. Switch to **edit mode** (Cmd+E or click the lock icon to unlock).
+3. Delete the patch cord from the "script npm install" message box to `p npm`.
+4. Delete the `p npm` subpatcher object.
+5. Draw a new patch cord from the "script npm install" message box **outlet** to the main `node.script liveql-n4m.js` object **inlet**.
+6. Save (Cmd+S).
+
+After this change:
+- The `..js` error on load is gone (no more `node.script .` object).
+- Clicking "script npm install" in performance mode installs dependencies via the main object.
+- `script start` continues to work as before.
+- npm output routes through the existing `route stdout stderr` → `print` chain.
 
 ## Source Notes
 
