@@ -147,7 +147,7 @@ const typeDefs = /* GraphQL */ `
     start_time: Float!
     duration: Float!
     velocity: Float!
-    mute: Int!
+    mute: Boolean!
     probability: Float!
     velocity_deviation: Float!
     release_velocity: Float!
@@ -163,7 +163,7 @@ const typeDefs = /* GraphQL */ `
     start_time: Float
     duration: Float
     velocity: Float
-    mute: Int
+    mute: Boolean
     probability: Float
     velocity_deviation: Float
     release_velocity: Float
@@ -239,6 +239,20 @@ function toLiveBool(value) {
   return value ? 1 : 0;
 }
 
+function normalizeNoteInput(note) {
+  if (note.mute === undefined) {
+    return note;
+  }
+  return { ...note, mute: toLiveBool(note.mute) };
+}
+
+function normalizeNotesDictionaryInput(notesDictionary) {
+  return {
+    ...notesDictionary,
+    notes: notesDictionary.notes.map(normalizeNoteInput),
+  };
+}
+
 function compareNotes(a, b) {
   // start_time ascending, pitch ascending
   if (a.start_time < b.start_time) return -1;
@@ -297,11 +311,19 @@ const resolvers = {
       return getClip(args.id);
     },
     clip_add_new_notes: async (parent, args) => {
-      await call(args.id, "add_new_notes", args.notes_dictionary);
+      await call(
+        args.id,
+        "add_new_notes",
+        normalizeNotesDictionaryInput(args.notes_dictionary)
+      );
       return getClip(args.id);
     },
     clip_apply_note_modifications: async (parent, args) => {
-      await call(args.id, "apply_note_modifications", args.notes_dictionary);
+      await call(
+        args.id,
+        "apply_note_modifications",
+        normalizeNotesDictionaryInput(args.notes_dictionary)
+      );
       return getClip(args.id);
     },
     clip_fire: async (parent, args) => {

@@ -21,9 +21,8 @@ Primary sources:
 
 - `liveql-n4m.js` exposes a very small, focused slice of the LOM: `Song`, `Song.View`, `Track`, `ClipSlot`, `Clip`, plus MIDI note dictionaries returned from clip note functions.
 - The GraphQL schema mostly mirrors LOM children/properties directly, but `Clip.notes` is not a native LOM property. It is synthesized by calling `Clip.get_notes_extended`.
-- The schema currently models many LOM `bool` values as GraphQL `Int`, which works but loses intent.
 - Object identity in the Live API is split between stable canonical paths like `live_set tracks 0 clip_slots 1 clip` and dynamic runtime `id`s. The schema uses ids for follow-up reads/mutations.
-- The important hierarchy for this project is: `Song -> Song.View / Track[] -> ClipSlot[] -> Clip`, with note editing hanging off `Clip` methods.
+- The important hierarchy for this project is: `Song -> Song.View / Track[] -> ClipSlot[] -> Clip`, with note editing and clip state changes hanging off `Clip` methods.
 
 ## How this code reaches the LOM
 
@@ -67,28 +66,31 @@ graph TD
 | GraphQL type/field | LOM object | LOM member kind | Canonical path or call | Notes |
 | --- | --- | --- | --- | --- |
 | `Query.live_set` | `Song` | root object | `live_set` | Entry point to the schema |
-| `Song.is_playing` | `Song` | property | `is_playing` | LOM type is `bool`, schema uses `Int` |
+| `Song.is_playing` | `Song` | property | `is_playing` | Transport running state |
 | `Song.view` | `Song` | child | `view` | Resolves to `Song.View` |
 | `Song.tracks` | `Song` | child list | `tracks` | Returns visible regular tracks, not return/master tracks |
 | `SongView.selected_track` | `Song.View` | child | `selected_track` | Track currently selected in Live UI |
 | `SongView.detail_clip` | `Song.View` | child | `detail_clip` | Clip shown in Detail View |
 | `Track.clip_slots` | `Track` | child list | `clip_slots` | Session View slots on a track |
-| `Track.has_midi_input` | `Track` | property | `has_midi_input` | LOM `bool`, schema `Int` |
+| `Track.has_midi_input` | `Track` | property | `has_midi_input` | Useful track capability flag |
 | `Track.name` | `Track` | property | `name` | Get/set supported in LOM |
 | `ClipSlot.clip` | `ClipSlot` | child | `clip` | `id 0` if empty; schema maps that to `null` |
-| `ClipSlot.has_clip` | `ClipSlot` | property | `has_clip` | LOM `bool`, schema `Int` |
+| `ClipSlot.has_clip` | `ClipSlot` | property | `has_clip` | Whether the slot currently contains a clip |
 | `Clip.end_time` | `Clip` | property | `end_time` | Read-only/observe in LOM |
 | `Clip.is_arrangement_clip` | `Clip` | property | `is_arrangement_clip` | Distinguishes session vs arrangement |
 | `Clip.is_midi_clip` | `Clip` | property | `is_midi_clip` | Used to gate note access |
 | `Clip.length` | `Clip` | property | `length` | Read-only in LOM |
+| `Clip.looping` | `Clip` | property | `looping` | Get/set clip loop enabled state |
 | `Clip.name` | `Clip` | property | `name` | Settable |
 | `Clip.signature_denominator` | `Clip` | property | `signature_denominator` | Settable |
 | `Clip.signature_numerator` | `Clip` | property | `signature_numerator` | Settable |
 | `Clip.start_time` | `Clip` | property | `start_time` | Read-only/observe in LOM |
 | `Clip.notes` | `Clip` | function-backed field | `get_notes_extended(...)` | Not a native LOM property |
+| `Note.mute` | note dictionary field | dictionary key | `mute` | Comes from clip note dictionary APIs |
 | `Mutation.song_start_playing` | `Song` | function | `start_playing()` | Returns refreshed `Song` |
 | `Mutation.song_stop_playing` | `Song` | function | `stop_playing()` | Returns refreshed `Song` |
 | `Mutation.track_set_name` | `Track` | property set | `set name ...` | LOM property write |
+| `Mutation.clip_set_looping` | `Clip` | property set | `set looping ...` | Boolean mutation mapped to clip property write |
 | `Mutation.clip_set_properties` | `Clip` | property set | `set name/signature_* ...` | Batched with `Promise.all` |
 | `Mutation.clip_add_new_notes` | `Clip` | function | `add_new_notes(dict)` | MIDI clips only |
 | `Mutation.clip_apply_note_modifications` | `Clip` | function | `apply_note_modifications(dict)` | MIDI clips only |
@@ -259,7 +261,7 @@ Why it matters here:
   - `live_set tracks N arrangement_clips M`
 - GraphQL type: `Clip`
 - Used members in this repo:
-  - properties: `end_time`, `is_arrangement_clip`, `is_midi_clip`, `length`, `name`, `signature_denominator`, `signature_numerator`, `start_time`
+  - properties: `end_time`, `is_arrangement_clip`, `is_midi_clip`, `length`, `looping`, `name`, `signature_denominator`, `signature_numerator`, `start_time`
   - functions: `fire`, `get_notes_extended`, `get_selected_notes_extended`, `select_all_notes`, `add_new_notes`, `apply_note_modifications`, `remove_notes_by_id`, `remove_notes_extended`
 
 What `Clip` represents:
@@ -331,17 +333,18 @@ flowchart TD
   A["song_start_playing"] --> A1["Song start_playing"]
   B["song_stop_playing"] --> B1["Song stop_playing"]
   C["track_set_name"] --> C1["Track name set"]
-  D["clip_set_properties"] --> D1["Clip name set"]
-  D --> D2["Clip signature_denominator set"]
-  D --> D3["Clip signature_numerator set"]
-  E["clip_fire"] --> E1["Clip fire"]
-  F["clip_add_new_notes"] --> F1["Clip add_new_notes"]
-  G["clip_apply_note_modifications"] --> G1["Clip apply_note_modifications"]
-  H["clip_get_notes_extended"] --> H1["Clip get_notes_extended"]
-  I["clip_get_selected_notes_extended"] --> I1["Clip get_selected_notes_extended"]
-  J["clip_select_all_notes"] --> J1["Clip select_all_notes"]
-  K["clip_remove_notes_by_id"] --> K1["Clip remove_notes_by_id"]
-  L["clip_remove_notes_extended"] --> L1["Clip remove_notes_extended"]
+  D["clip_set_looping"] --> D1["Clip looping set"]
+  E["clip_set_properties"] --> E1["Clip name set"]
+  E --> E2["Clip signature_denominator set"]
+  E --> E3["Clip signature_numerator set"]
+  F["clip_fire"] --> F1["Clip fire"]
+  G["clip_add_new_notes"] --> G1["Clip add_new_notes"]
+  H["clip_apply_note_modifications"] --> H1["Clip apply_note_modifications"]
+  I["clip_get_notes_extended"] --> I1["Clip get_notes_extended"]
+  J["clip_get_selected_notes_extended"] --> J1["Clip get_selected_notes_extended"]
+  K["clip_select_all_notes"] --> K1["Clip select_all_notes"]
+  L["clip_remove_notes_by_id"] --> L1["Clip remove_notes_by_id"]
+  M["clip_remove_notes_extended"] --> M1["Clip remove_notes_extended"]
 ```
 
 ## Important behavioral details and caveats
@@ -365,25 +368,13 @@ get_notes_extended(id, 0, 128, 0, parent.length)
 
 This is the biggest semantic mismatch between the GraphQL surface and the deeper LOM.
 
-### 3. Booleans are exposed as `Int`
-
-Examples:
-
-- `Song.is_playing`
-- `Track.has_midi_input`
-- `ClipSlot.has_clip`
-- `Clip.is_arrangement_clip`
-- `Clip.is_midi_clip`
-
-In LOM docs these are `bool`, but GraphQL models them as `Int!`. That is workable because Max/Live often returns `0` or `1`, but `Boolean!` would better express intent.
-
-### 4. The schema does not expose LOM object `type`
+### 3. The schema does not expose LOM object `type`
 
 - The V8 bridge returns `type` for every object.
 - GraphQL discards it.
 - Exposing `type` would help clients distinguish `Track`, `Clip`, etc. without inferring from path/field position.
 
-### 5. The schema is session-view-first
+### 4. The schema is session-view-first
 
 - The main traversal is `Song.tracks -> Track.clip_slots -> ClipSlot.clip`.
 - `Track.arrangement_clips` exists in the LOM but is not exposed.
