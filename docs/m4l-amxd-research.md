@@ -1,47 +1,41 @@
 # Max for Live / AMXD Research
 
-Date: 2026-03-18 (updated 2026-03-20)
+Date: 2026-03-18 (updated 2026-03-21)
 
 ## Grounded Findings (From Sources)
 
-- `.amxd` is the file type for an “Ableton Live Max Device.” [1]
-- Max for Live is an add-on co-developed with Cycling ’74 that lets users create instruments, audio effects, MIDI effects, and MIDI tools in Live. [2]
+- `.amxd` is the file type for an "Ableton Live Max Device." [1]
+- Max for Live is an add-on co-developed with Cycling '74 that lets users create instruments, audio effects, MIDI effects, and MIDI tools in Live. [2]
 - Max for Live comes pre-installed with Live Suite (and with Live Standard if the add-on is installed). [2]
 - Max devices are not saved inside Live Sets; they exist as separate files. [2]
 - Live treats Max for Live devices similarly to sample files; Live Sets reference the AMXD file rather than containing it. [3]
-- “Freezing” a Max for Live device consolidates its dependencies into the device so it can be distributed reliably; dependencies can include JavaScript code. [3]
-- Max’s search path is the mechanism used to resolve files by name; it looks in the patcher’s folder, the project, and other configured paths. [4]
+- "Freezing" a Max for Live device consolidates its dependencies into the device so it can be distributed reliably; dependencies can include JavaScript code. [3]
+- Max's search path is the mechanism used to resolve files by name; it looks in the patcher's folder, the project, and other configured paths. [4]
 - Max for Live devices are treated as projects and follow the same search-path rules when locating files. [4]
-- JavaScript in Max runs via the `js` object; for Max for Live, the `LiveAPI` object allows JavaScript to communicate with Live’s API. [5]
+- The `v8` object runs JavaScript via the Google V8 engine (Max 9+). It supports ES6+ syntax: `let`/`const`, arrow functions, template literals, classes, destructuring, etc. For Max for Live, the `LiveAPI` object allows JavaScript to communicate with Live's API. [5]
 - Node for Max runs Node.js via the `[node.script]` object, and exposes a `max-api` module that you load with `require("max-api")`. [6]
 
 ## Implications For This Repo (Reasoned From Sources)
 
 - If `@liveql.amxd` is **frozen**, the device can contain its JavaScript dependencies internally (freezing explicitly allows JS as a dependency), so the `.js` files do not need to live beside the device on disk. [3]
 - If the device is **not frozen**, Max will look for `.js` files using its search path rules (current patcher folder, the associated project, or other configured paths). That suggests the `.amxd` either expects the `.js` files to be nearby or expects them to be in a known Max search path / project location. [4]
-- Because Live Sets reference the AMXD file instead of embedding it, the device’s dependencies must be resolvable either inside the AMXD (frozen) or via Max’s search path on the local machine. [2] [3] [4]
-- The presence of both `liveql-m4l.js` (Max JS) and `liveql-n4m.js` (Node for Max) aligns with the documented split: `js` for Max’s embedded JS runtime + `node.script` for Node.js with `max-api`. [5] [6]
-- The repo’s `package.json` is plausibly used only for the Node for Max side (Node.js runtime), not as a traditional application entry point. This aligns with the Node for Max requirement to load Node modules via `require(...)` inside a `[node.script]` context, but the docs do not specify module install locations or automatic dependency installation. [6]
+- Because Live Sets reference the AMXD file instead of embedding it, the device's dependencies must be resolvable either inside the AMXD (frozen) or via Max's search path on the local machine. [2] [3] [4]
+- The presence of both `liveql-m4l.js` (Max JS via `v8`) and `liveql-n4m.js` (Node for Max) aligns with the two-process architecture: `v8` for Max's embedded V8 runtime + `node.script` for Node.js with `max-api`. [5] [6]
+- The repo's `package.json` is used only for the Node for Max side (Node.js runtime), not as a traditional application entry point. Dependencies are `graphql` and `graphql-yoga`, loaded via `require(...)` inside the `[node.script]` context. [6]
 
-## AMXD Internals (From Text Dump Provided)
+## AMXD Internals
 
 High-level structure in the embedded patcher JSON:
 
-- **Max JS runtime:** `js liveql-m4l.js` is present, with `parameter_enable` disabled. This is the Max JS side that talks to Live via LiveAPI (consistent with the repo’s `liveql-m4l.js`). [5]
-- **Node for Max runtime:** `node.script liveql-n4m.js @autostart 0 @watch 1` is present. This indicates a separate Node process for the GraphQL server that does not autostart and will restart on file changes. Node for Max is explicitly designed to run Node.js in a separate process and communicate via `max-api`. [6] [7]
-- **Manual lifecycle controls:** The patch includes message boxes for `script start`, `script stop`, `script status`, `script processStatus`, and `script running`, which map directly to `node.script`’s `script` messages (start/stop/status/running/processStatus). [7]
-- **NPM hooks:** There are message boxes for `script npm install` and `script npm --version`. The Node for Max `script npm …` message is documented as a wrapper over npm that installs dependencies from `package.json` in the same folder as the Node script argument. [7]
-  - In this device, `script npm --version` is sent to `node.script liveql-n4m.js` (so it will check npm relative to that script’s folder).
-  - `script npm install` is routed into a subpatcher (`p npm`) that uses `node.script .`, which implies npm is run relative to `.` (the current patcher folder), likely where `package.json` lives when the device is installed.
+- **V8 JS runtime:** `v8 liveql-m4l.js` is present, with `parameter_enable` disabled. This is the Max JS side that talks to Live via LiveAPI (consistent with the repo's `liveql-m4l.js`). The `v8` object requires Max 9 (Ableton Live 12). [5]
+- **Node for Max runtime:** `node.script liveql-n4m.js @autostart 0 @watch 1` is present. This runs a separate Node.js process for the GraphQL server. It does not autostart and will restart on file changes via `@watch`. [6] [7]
+- **Configurable port:** The device includes a `live.numbox` (range 1024–65535, default 4000) wired through `prepend script start` to `node.script`. The port number is passed as a process argument and read in `liveql-n4m.js` via `process.argv[2]`.
+- **Manual lifecycle controls:** The patch includes message boxes for `script start`, `script stop`, `script status`, `script processStatus`, and `script running`, which map directly to `node.script`'s `script` messages. [7]
+- **NPM hooks:** There are message boxes for `script npm install` and `script npm --version`. The Node for Max `script npm …` message is a wrapper over npm that installs dependencies from `package.json` in the same directory as the Node script argument. [7]
 - **Node stdout/stderr logging:** Node output is routed through `route stdout stderr` and printed to Max (`print stdout`, `print stderr`, `print info`).
-- **Monitoring UI:** A bundled bpatcher `n4m.monitor.maxpat` is embedded, which comes from the Node for Max package and is used for status/monitoring.
+- **Monitoring UI:** A bundled bpatcher `n4m.monitor.maxpat` is embedded, which comes from the Node for Max package and provides status/monitoring via a `jweb` element.
 - **MIDI pass-through:** `midiin` is wired directly to `midiout`, so the device itself does not alter MIDI unless the JS/Node logic does so elsewhere.
-- **Dependency cache hints:** The device lists `liveql-m4l.js` in `dependency_cache` with a Windows Ableton User Library path, along with Node for Max debug-monitor assets. There is no explicit `liveql-n4m.js` entry in the cache excerpt you shared.
-  - This suggests the device is **not frozen**, and expects JS/Node files to be resolvable via Max’s search path and project rules rather than embedded. [3] [4]
-
-Observed UI text in the patch:
-
-- A comment reads: “Just once, you’ll need to install express.” This matches the presence of the `script npm install` button, but note that the current repo’s `package.json` uses `apollo-server` and `graphql` (not `express` directly), so this may be legacy wording rather than authoritative.
+- **Dependency cache hints:** The device lists `liveql-m4l.js` in `dependency_cache`, along with Node for Max debug-monitor assets. This suggests the device is **not frozen**, and expects JS/Node files to be resolvable via Max's search path and project rules rather than embedded. [3] [4]
 
 ## Node for Max Runtime (From Sources)
 
@@ -51,7 +45,7 @@ Node for Max bundles its own Node.js binary — it does not use the system Node 
 
 - **Max 8.0 – 8.5.x**: Bundled Node.js v16.6.0 (EOL September 2023). [9]
 - **Max 8.6+**: Updated to Node.js v20.6 (LTS track). [9]
-- **Ableton Live 12**: Ships with Max 9, which includes Node v20. [9] [12]
+- **Ableton Live 12 (Max 9)**: Includes Node v20. [9] [12]
 - Node for Max tracks LTS releases of Node.js. [8]
 - You can override the bundled binary using `@node_bin_path` and `@npm_bin_path` attributes on `node.script`. Both should be changed together to avoid incompatibilities. [8]
 
@@ -143,11 +137,11 @@ Step-by-step instructions:
 8. **Restore moved files** — if Max moved files, close the device, then run `git checkout -- .` in the repo to restore the original file layout.
 9. **Reload the device** — drag the .amxd in again. This time files will not be moved. [11] [14] [16]
 
-## Development Workflow (Reasoned From Sources)
+## Development Workflow
 
 ### Backward Compatibility
 
-Old .amxd files open in Live 12 (Max 9) without manual migration. The .amxd format (binary header + JSON patcher + binary footer) has remained structurally stable across Max versions. Saving in Max 9 writes the current format; there is no explicit "upgrade" step. [12]
+The .amxd format (binary header + JSON patcher + binary footer) has remained structurally stable across Max versions. Max 9 is backward-compatible with Max 8 patches. Saving in Max 9 writes the current format; there is no explicit "upgrade" step. [12]
 
 ### First-Time Setup (One-Time)
 
@@ -169,21 +163,25 @@ Edit `liveql-m4l.js` and `liveql-n4m.js` in any text editor or IDE. Because the 
 
 The `@watch 1` attribute on `node.script` means Max monitors `liveql-n4m.js` for changes and auto-restarts the Node process when the file is saved. No need to manually restart the script after editing. [7]
 
-For `liveql-m4l.js` (Max JS, not Node), changes are picked up when the `js` object is reloaded — either by sending it a `compile` message, toggling the script off/on, or reloading the device.
+For `liveql-m4l.js` (Max JS via `v8`, not Node), changes are picked up when the `v8` object is reloaded — either by sending it a `compile` message, toggling the script off/on, or reloading the device.
+
+**`v8` caveat:** `inlets` and `outlets` must be declared as bare globals (no `var`/`let`/`const`) for Max's attribute binding to recognize them. All other code can use modern ES6+ syntax.
 
 ### Installing Node Dependencies
 
 1. **Open the Max editor** — see step 2 above.
 2. **Switch to performance mode** — click the lock icon (bottom-left of Max editor) or press Cmd+E so the patcher is locked. Message boxes are only clickable in performance mode.
-3. **Click the `script npm install` message box** in the patcher. This runs npm in the same directory as `liveql-n4m.js`, installing dependencies from `package.json` into a `node_modules/` folder next to the script. [7] [10]
+3. **Click the `script npm install` message box** in the patcher. This runs npm in the same directory as `liveql-n4m.js`, installing `graphql` and `graphql-yoga` from `package.json` into a `node_modules/` folder next to the script. [7] [10]
 4. **Check output** — npm stdout/stderr is routed to the Max Console. Open the Max Console from the Max editor sidebar (click the console icon, or Window → Max Console) to see install progress and errors. [7]
 
 ### Starting the Node Script
 
 1. In the Max editor, switch to **performance mode** (lock icon or Cmd+E).
-2. Click the **`script start`** message box in the patcher. This starts the Node process running `liveql-n4m.js`. [7]
-3. Check the Max Console for startup logs (e.g., `liveql: loaded the liveql-n4m.js script`).
-4. To stop: click **`script stop`**. To check status: click **`script status`** or **`script running`**. [7]
+2. Set the port in the **port number box** (default 4000, range 1024–65535).
+3. Click the **`script start`** message box in the patcher. This starts the Node process running `liveql-n4m.js` with the configured port. [7]
+4. Check the Max Console for startup logs (e.g., `liveql: server ready at http://localhost:4000`).
+5. Browse to `http://localhost:<port>/` to access GraphiQL (built in to Yoga by default).
+6. To stop: click **`script stop`**. To check status: click **`script status`** or **`script running`**. [7]
 
 Note: the device has `@autostart 0`, so the Node script does not start automatically when the device loads. You must click `script start` manually. [7]
 
@@ -196,16 +194,60 @@ Freezing (snowflake icon in the Max editor toolbar) bundles all dependencies (JS
 - `.amxd` files are mixed binary/JSON — git treats them as binary, so diffs are not human-readable. Track the .amxd for backup, but rely on the `.js` files for meaningful diffs. Treat .amxd changes as whole-file replacements. [15]
 - Some developers use external tools for readable Max patch diffs, but this is not standard practice. [15]
 
-## Diagrams
+## Architecture
+
+### Two-Process Design
+
+The device runs two runtimes that communicate via Max's message system:
+
+```
+GraphQL Client (curl / browser / app)
+       |
+       v
+  liveql-n4m.js          Node.js process (node.script)
+  [GraphQL Yoga server]  Port 4000 (configurable)
+       |
+       | Max.outlet("get/set/call", JSON)  — IPC via Max messages
+       | Max.addHandler("result", ...)     — receives results back
+       v
+  liveql-m4l.js          Max V8 runtime (v8 object)
+  [LiveAPI bridge]       Direct LOM access
+       |
+       v
+  Ableton Live           Live Object Model (LOM)
+```
+
+The Node side (`liveql-n4m.js`) sends action JSON to Max via `Max.outlet()`. The V8 side (`liveql-m4l.js`) receives these as message handlers (`get`, `set`, `call`), executes them against `LiveAPI`, and sends results back via `outlet(0, "result", json)`. The Node side's `Max.addHandler("result", ...)` resolves the corresponding Promise by `actionId`.
+
+### GraphQL Server
+
+The server uses **GraphQL Yoga** (`graphql-yoga@5.18.1`) with `graphql@16.13.1`. It is created with:
+
+```javascript
+const yoga = createYoga({
+  schema: createSchema({ typeDefs, resolvers }),
+  graphqlEndpoint: "/",
+  maskedErrors: false,
+});
+const server = http.createServer(yoga);
+```
+
+- Serves at the root path (`/`) — not `/graphql`.
+- GraphiQL is enabled by default (browser GET at the endpoint).
+- CORS is enabled by default with permissive settings (fine for localhost).
+- `maskedErrors: false` passes full error detail for local development.
+- The server is a plain Node `http.createServer` — no Express dependency.
 
 ### AMXD Device Patcher (Internal Wiring)
 
 ```mermaid
 flowchart LR
   subgraph AMXD[liveql.amxd]
-    JS[js liveql-m4l.js]
+    V8[v8 liveql-m4l.js]
     NODE[node.script liveql-n4m.js
     @autostart 0 @watch 1]
+    PORT[Port numbox
+    1024–65535]
     START[script start]
     STOP[script stop]
     STATUS[script status / processStatus / running]
@@ -215,13 +257,13 @@ flowchart LR
     OUT[print stdout/stderr/info]
     MON[n4m.monitor.maxpat]
 
-    START --> NODE
+    PORT --> START --> NODE
     STOP --> NODE
     STATUS --> NODE
     NPMV --> NODE
     NODE --> ROUTE --> OUT
-    NODE --> JS
-    JS --> NODE
+    NODE --> V8
+    V8 --> NODE
     NODE --> MON
     NPMI --> P_NPM
 
@@ -234,61 +276,40 @@ flowchart LR
   end
 ```
 
-### AMXD In Relation To Node + Live
-
-```mermaid
-flowchart LR
-  Live[Ableton Live]
-  AMXD[Max for Live device
-  liveql.amxd]
-  MaxJS[Max JS runtime
-  liveql-m4l.js]
-  Node[Node for Max runtime
-  liveql-n4m.js]
-  Npm[NPM / node_modules]
-  GQL[GraphQL API
-  localhost:4000]
-
-  Live --> AMXD
-  AMXD --> MaxJS --> Live
-  AMXD --> Node --> GQL
-  Node --> Npm
-```
-
 ## Source Notes
 
-1. Cycling ’74 “File Types” (AMXD is an Ableton Live Max Device).
+1. Cycling '74 "File Types" (AMXD is an Ableton Live Max Device).
    https://docs.cycling74.com/userguide/filetypes/
-2. Ableton Live 12 Manual “Max for Live” (overview, setup, and device storage behavior).
+2. Ableton Live 12 Manual "Max for Live" (overview, setup, and device storage behavior).
    https://www.ableton.com/en/manual/max-for-live/
 3. Ableton Max for Live Production Guidelines (freezing, dependencies, and AMXD references).
    https://github.com/Ableton/maxdevtools/blob/main/m4l-production-guidelines/m4l-production-guidelines.md
-4. Cycling ’74 “Search Path” (file resolution rules; Max for Live devices as projects).
+4. Cycling '74 "Search Path" (file resolution rules; Max for Live devices as projects).
    https://docs.cycling74.com/userguide/search_path/
-5. Cycling ’74 “JavaScript Usage” (Max JS + LiveAPI for Max for Live).
-   https://docs.cycling74.com/legacy/max8/vignettes/javascript_usage_topic
-6. Cycling ’74 “Node for Max API” (Node.js via `node.script`, `max-api` module).
+5. Cycling '74 "JavaScript in Max" (v8 object, ES6+ support, LiveAPI for Max for Live).
+   https://docs.cycling74.com/max8/vignettes/javascript_usage_topic
+6. Cycling '74 "Node for Max API" (Node.js via `node.script`, `max-api` module).
    https://docs.cycling74.com/apiref/nodeformax/
-7. Cycling ‘74 “node.script” reference (script messages, npm integration, process control).
+7. Cycling '74 "node.script" reference (script messages, npm integration, process control).
    https://docs.cycling74.com/reference/node.script/
-8. Cycling ‘74 “Node for Max - Custom Binaries” (bundled Node version, LTS tracking, overriding binaries).
+8. Cycling '74 "Node for Max - Custom Binaries" (bundled Node version, LTS tracking, overriding binaries).
    https://docs.cycling74.com/max8/vignettes/09_n4m_custombinaries
-9. Cycling ‘74 Forums “Bundled Node.js Version End of Life” (version history: v16 in Max 8.0–8.5, v20 in Max 8.6+).
+9. Cycling '74 Forums "Bundled Node.js Version End of Life" (version history: v16 in Max 8.0–8.5, v20 in Max 8.6+).
    https://cycling74.com/forums/bundled-nodejs-version-end-of-life-on-2023-09-11
-10. Cycling ‘74 “Node for Max - Using npm” (npm install behavior, package.json location, node_modules).
+10. Cycling '74 "Node for Max - Using npm" (npm install behavior, package.json location, node_modules).
     https://docs.cycling74.com/max8/vignettes/02_n4m_usingnpm
-11. Cycling ‘74 “Node for Max - Working with Projects, Devices and Standalones” (project structure, freezing, bundling node_modules).
+11. Cycling '74 "Node for Max - Working with Projects, Devices and Standalones" (project structure, freezing, bundling node_modules).
     https://docs.cycling74.com/max8/vignettes/03_n4m_projects_devices
-12. Ableton “Recommended Max versions” and “Supporting older Live versions with your M4L device” (Live/Max version mapping, backward compatibility).
+12. Ableton "Recommended Max versions" and "Supporting older Live versions with your M4L device" (Live/Max version mapping, backward compatibility).
     https://help.ableton.com/hc/en-us/articles/209772305-Recommended-Max-versions
     https://help.ableton.com/hc/en-us/articles/4406321223186-Supporting-older-Live-versions-with-your-Max-for-Live-device
-13. Ableton Live 12 Manual “Max for Live” (editing devices, saving, bundled vs standalone Max).
+13. Ableton Live 12 Manual "Max for Live" (editing devices, saving, bundled vs standalone Max).
     https://www.ableton.com/en/manual/max-for-live/
-14. Cycling ‘74 “Project Settings” (Keep Project Folder Organized: default on, per-project, file category sorting).
+14. Cycling '74 "Project Settings" (Keep Project Folder Organized: default on, per-project, file category sorting).
     https://docs.cycling74.com/max8/vignettes/projects_settings
-15. Cycling ‘74 Forums (Max for Live and Git, AMXD file format, version control practices).
+15. Cycling '74 Forums (Max for Live and Git, AMXD file format, version control practices).
     https://cycling74.com/forums/max-for-live-and-git
-16. Cycling ‘74 Forums "My Max Project appears to delete files when opened" (autoorganize triggers on load, files moved not deleted).
+16. Cycling '74 Forums "My Max Project appears to delete files when opened" (autoorganize triggers on load, files moved not deleted).
     https://cycling74.com/forums/my-max-project-appears-to-delete-files-when-opened
-17. Cycling ‘74 Forums "Stop a project from moving files around" (autoorganize moves files on every project open).
+17. Cycling '74 Forums "Stop a project from moving files around" (autoorganize moves files on every project open).
     https://cycling74.com/forums/stop-a-project-from-moving-files-around
