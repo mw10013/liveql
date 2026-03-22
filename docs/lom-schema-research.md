@@ -31,14 +31,14 @@ Primary sources:
 
 ```mermaid
 flowchart LR
-  G[GraphQL client] --> N[`liveql-n4m.js`\nNode for Max]
-  N -->|get / set / call| M[`liveql-m4l.js`\nMax V8 + LiveAPI]
-  M --> L[Live Object Model]
-  L --> A[Song]
-  L --> B[Song.View]
-  L --> C[Track]
-  L --> D[ClipSlot]
-  L --> E[Clip]
+  G["GraphQL client"] --> N["liveql-n4m.js Node for Max"]
+  N -->|"get set call"| M["liveql-m4l.js Max V8 LiveAPI"]
+  M --> L["Live Object Model"]
+  L --> A["Song"]
+  L --> B["Song View"]
+  L --> C["Track"]
+  L --> D["ClipSlot"]
+  L --> E["Clip"]
 ```
 
 Important runtime facts from the bridge:
@@ -52,14 +52,14 @@ Important runtime facts from the bridge:
 
 ```mermaid
 graph TD
-  song[`Song\nlive_set`]
-  song --> songView[`Song.View\nlive_set view`]
-  song --> tracks[`Track[]\nlive_set tracks N`]
-  songView --> selectedTrack[`selected_track -> Track`]
-  songView --> detailClip[`detail_clip -> Clip`]
-  tracks --> clipSlots[`ClipSlot[]\nlive_set tracks N clip_slots M`]
-  clipSlots --> clip[`Clip\nlive_set tracks N clip_slots M clip`]
-  clip --> notes[`Note[]\nsynthetic GraphQL field`]
+  song["Song live_set"]
+  song --> songView["Song View live_set view"]
+  song --> tracks["Track list live_set tracks N"]
+  songView --> selectedTrack["selected_track Track"]
+  songView --> detailClip["detail_clip Clip"]
+  tracks --> clipSlots["ClipSlot list live_set tracks N clip_slots M"]
+  clipSlots --> clip["Clip live_set tracks N clip_slots M clip"]
+  clip --> notes["Note list synthetic GraphQL field"]
 ```
 
 ## Schema to LOM mapping
@@ -328,20 +328,20 @@ This matches the dictionary shape documented for:
 
 ```mermaid
 flowchart TD
-  A[`song_start_playing`] --> A1[`Song.start_playing()`]
-  B[`song_stop_playing`] --> B1[`Song.stop_playing()`]
-  C[`track_set_name`] --> C1[`Track.name = ...`]
-  D[`clip_set_properties`] --> D1[`Clip.name = ...`]
-  D --> D2[`Clip.signature_denominator = ...`]
-  D --> D3[`Clip.signature_numerator = ...`]
-  E[`clip_fire`] --> E1[`Clip.fire()`]
-  F[`clip_add_new_notes`] --> F1[`Clip.add_new_notes(dict)`]
-  G[`clip_apply_note_modifications`] --> G1[`Clip.apply_note_modifications(dict)`]
-  H[`clip_get_notes_extended`] --> H1[`Clip.get_notes_extended(...)`]
-  I[`clip_get_selected_notes_extended`] --> I1[`Clip.get_selected_notes_extended()`]
-  J[`clip_select_all_notes`] --> J1[`Clip.select_all_notes()`]
-  K[`clip_remove_notes_by_id`] --> K1[`Clip.remove_notes_by_id(...)`]
-  L[`clip_remove_notes_extended`] --> L1[`Clip.remove_notes_extended(...)`]
+  A["song_start_playing"] --> A1["Song start_playing"]
+  B["song_stop_playing"] --> B1["Song stop_playing"]
+  C["track_set_name"] --> C1["Track name set"]
+  D["clip_set_properties"] --> D1["Clip name set"]
+  D --> D2["Clip signature_denominator set"]
+  D --> D3["Clip signature_numerator set"]
+  E["clip_fire"] --> E1["Clip fire"]
+  F["clip_add_new_notes"] --> F1["Clip add_new_notes"]
+  G["clip_apply_note_modifications"] --> G1["Clip apply_note_modifications"]
+  H["clip_get_notes_extended"] --> H1["Clip get_notes_extended"]
+  I["clip_get_selected_notes_extended"] --> I1["Clip get_selected_notes_extended"]
+  J["clip_select_all_notes"] --> J1["Clip select_all_notes"]
+  K["clip_remove_notes_by_id"] --> K1["Clip remove_notes_by_id"]
+  L["clip_remove_notes_extended"] --> L1["Clip remove_notes_extended"]
 ```
 
 ## Important behavioral details and caveats
@@ -409,14 +409,14 @@ If the goal is deeper LOM coverage while staying aligned with this codebase, the
 
 ```mermaid
 graph LR
-  Q[`Query.live_set`] --> S[`Song`]
-  S --> SV[`Song.view -> Song.View`]
-  S --> T[`Song.tracks -> Track[]`]
-  SV --> ST[`selected_track -> Track`]
-  SV --> DC[`detail_clip -> Clip`]
-  T --> CS[`Track.clip_slots -> ClipSlot[]`]
-  CS --> C[`ClipSlot.clip -> Clip`]
-  C --> N[`Clip note functions -> Note[] dictionaries`]
+  Q["Query live_set"] --> S["Song"]
+  S --> SV["Song View"]
+  S --> T["Track list"]
+  SV --> ST["selected_track Track"]
+  SV --> DC["detail_clip Clip"]
+  T --> CS["clip_slots ClipSlot list"]
+  CS --> C["clip Clip"]
+  C --> N["note functions Note dictionaries"]
 ```
 
 ## Bottom line
