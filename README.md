@@ -3,6 +3,11 @@ Liveql
 Liveql provides a qraphql schema on a subset of the Ableton Live LOM.
 
 ```bash
+# get whether the song is playing
+curl -s http://localhost:4000 \
+  -H 'Content-Type: application/json' \
+  -d '{"query":"{ live_set { is_playing } }"}' | jq .
+
 # get all tracks and their names
 curl -s http://localhost:4000 \
   -H 'Content-Type: application/json' \

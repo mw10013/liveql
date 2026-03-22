@@ -77,7 +77,7 @@ const typeDefs = /* GraphQL */ `
   type Song {
     id: Int!
     path: String!
-    is_playing: Int!
+    is_playing: Boolean!
     view: SongView!
     tracks: [Track!]!
   }
@@ -93,7 +93,7 @@ const typeDefs = /* GraphQL */ `
     id: Int!
     path: String!
     clip_slots: [ClipSlot!]!
-    has_midi_input: Int!
+    has_midi_input: Boolean!
     name: String!
   }
 
@@ -101,15 +101,15 @@ const typeDefs = /* GraphQL */ `
     id: Int!
     path: String!
     clip: Clip
-    has_clip: Int!
+    has_clip: Boolean!
   }
 
   type Clip {
     id: Int!
     path: String!
     end_time: Float!
-    is_arrangement_clip: Int!
-    is_midi_clip: Int!
+    is_arrangement_clip: Boolean!
+    is_midi_clip: Boolean!
     length: Float!
     name: String!
     signature_denominator: Int!
