@@ -23,6 +23,7 @@ Primary sources:
 - The GraphQL schema mostly mirrors LOM children/properties directly, but `Clip.notes` is not a native LOM property. It is synthesized by calling `Clip.get_notes_extended`.
 - Object identity in the Live API is split between stable canonical paths like `live_set tracks 0 clip_slots 1 clip` and dynamic runtime `id`s. The schema uses ids for follow-up reads/mutations.
 - The important hierarchy for this project is: `Song -> Song.View / Track[] -> ClipSlot[] -> Clip`, with note editing and clip state changes hanging off `Clip` methods.
+- The schema also exposes index-addressed access that matches the LOM child-list structure: `Song.track(index)` and `Track.clip_slot(index)`.
 
 ## How this code reaches the LOM
 
@@ -67,10 +68,12 @@ graph TD
 | --- | --- | --- | --- | --- |
 | `Query.live_set` | `Song` | root object | `live_set` | Entry point to the schema |
 | `Song.is_playing` | `Song` | property | `is_playing` | Transport running state |
+| `Song.track(index)` | `Song` | child list item | `tracks N` | Index-addressed access to a single regular track |
 | `Song.view` | `Song` | child | `view` | Resolves to `Song.View` |
 | `Song.tracks` | `Song` | child list | `tracks` | Returns visible regular tracks, not return/master tracks |
 | `SongView.selected_track` | `Song.View` | child | `selected_track` | Track currently selected in Live UI |
 | `SongView.detail_clip` | `Song.View` | child | `detail_clip` | Clip shown in Detail View |
+| `Track.clip_slot(index)` | `Track` | child list item | `clip_slots M` | Index-addressed access to a single clip slot |
 | `Track.clip_slots` | `Track` | child list | `clip_slots` | Session View slots on a track |
 | `Track.has_midi_input` | `Track` | property | `has_midi_input` | Useful track capability flag |
 | `Track.name` | `Track` | property | `name` | Get/set supported in LOM |
@@ -109,6 +112,7 @@ graph TD
 - GraphQL type: `Song`
 - Used members in this repo:
   - child: `view`
+  - child list item: `track(index)`
   - child list: `tracks`
   - property: `is_playing`
   - functions: `start_playing`, `stop_playing`
@@ -144,6 +148,7 @@ Why it matters for this schema:
 
 - `Song` is the only root query.
 - Every current traversal starts from `live_set` and descends from there.
+- `track(index)` corresponds directly to the LOM path pattern `live_set tracks N`.
 
 ### 2. `Song.View`
 
@@ -181,6 +186,7 @@ Why it matters here:
 - Canonical path: `live_set tracks N`
 - GraphQL type: `Track`
 - Used members in this repo:
+  - child list item: `clip_slot(index)`
   - child list: `clip_slots`
   - properties: `has_midi_input`, `name`
   - property set: `name`
@@ -216,6 +222,7 @@ High-value LOM surface beyond the current schema:
 Why it matters here:
 
 - `Track.clip_slots` is the main bridge from session-level navigation into individual clips.
+- `clip_slot(index)` corresponds directly to the LOM path pattern `live_set tracks N clip_slots M`.
 - `has_midi_input` can be used as a rough signal that the track is MIDI-oriented, but it is not the same as checking that a specific clip is a MIDI clip.
 
 ### 4. `ClipSlot`
