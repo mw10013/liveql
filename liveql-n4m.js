@@ -84,6 +84,10 @@ Max.addHandler("result", async (json) => {
  * In practice, Yoga/GraphQL coerces `0` -> `false` and `1` -> `true` for output
  * fields typed as `Boolean`, so output boolean fields usually need no custom
  * resolver logic.
+ *
+ * For boolean mutations, GraphQL inputs arrive as normal JavaScript booleans.
+ * Live property setters still expect the Max/Live representation, so mutation
+ * resolvers convert `true` / `false` to `1` / `0` before calling `LiveAPI.set`.
  */
 const typeDefs = /* GraphQL */ `
   type Song {
@@ -123,6 +127,7 @@ const typeDefs = /* GraphQL */ `
     is_arrangement_clip: Boolean!
     is_midi_clip: Boolean!
     length: Float!
+    looping: Boolean!
     name: String!
     signature_denominator: Int!
     signature_numerator: Int!
@@ -176,6 +181,7 @@ const typeDefs = /* GraphQL */ `
     song_start_playing(id: Int!): Song
     song_stop_playing(id: Int!): Song
     track_set_name(id: Int!, name: String!): Track
+    clip_set_looping(id: Int!, looping: Boolean!): Clip
     clip_set_properties(id: Int!, properties: ClipPropertiesInput!): Clip
     clip_add_new_notes(id: Int!, notes_dictionary: NotesDictionaryInput!): Clip
     clip_apply_note_modifications(
@@ -221,11 +227,16 @@ function getClip(id) {
     "is_arrangement_clip",
     "is_midi_clip",
     "length",
+    "looping",
     "name",
     "signature_denominator",
     "signature_numerator",
     "start_time",
   ]);
+}
+
+function toLiveBool(value) {
+  return value ? 1 : 0;
 }
 
 function compareNotes(a, b) {
@@ -269,6 +280,10 @@ const resolvers = {
     track_set_name: async (parent, args) => {
       await set(args.id, "name", args.name);
       return getTrack(args.id);
+    },
+    clip_set_looping: async (parent, args) => {
+      await set(args.id, "looping", toLiveBool(args.looping));
+      return getClip(args.id);
     },
     clip_set_properties: async (parent, args) => {
       const promises = ["name", "signature_denominator", "signature_numerator"]
