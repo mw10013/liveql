@@ -109,6 +109,7 @@ const typeDefs = /* GraphQL */ `
   type Track {
     id: Int!
     path: String!
+    clip_slot(index: Int!): ClipSlot
     clip_slots: [ClipSlot!]!
     has_midi_input: Boolean!
     name: String!
@@ -375,6 +376,10 @@ const resolvers = {
       parent.selected_track ? getTrack(parent.selected_track) : null,
   },
   Track: {
+    clip_slot: (parent, args) => {
+      const id = parent.clip_slots[args.index];
+      return id === undefined ? null : getClipSlot(id);
+    },
     clip_slots: (parent) => parent.clip_slots.map((id) => getClipSlot(id)),
   },
   ClipSlot: {
