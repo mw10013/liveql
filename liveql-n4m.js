@@ -73,6 +73,18 @@ Max.addHandler("result", async (json) => {
   }
 });
 
+/**
+ * GraphQL is the schema boundary for Live API type normalization.
+ *
+ * The Live Object Model documents many fields as `bool`, but Max's `LiveAPI`
+ * commonly returns those values as numeric `0` / `1`. We keep the Max bridge in
+ * `liveql-m4l.js` generic and expose those fields here as GraphQL `Boolean`
+ * where appropriate.
+ *
+ * In practice, Yoga/GraphQL coerces `0` -> `false` and `1` -> `true` for output
+ * fields typed as `Boolean`, so output boolean fields usually need no custom
+ * resolver logic.
+ */
 const typeDefs = /* GraphQL */ `
   type Song {
     id: Int!
