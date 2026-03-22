@@ -95,6 +95,7 @@ const typeDefs = /* GraphQL */ `
     path: String!
     is_playing: Boolean!
     view: SongView!
+    track(index: Int!): Track
     tracks: [Track!]!
   }
 
@@ -358,6 +359,10 @@ const resolvers = {
   Song: {
     view: (parent) => {
       return get(parent.view, null, null, ["detail_clip", "selected_track"]);
+    },
+    track: (parent, args) => {
+      const id = parent.tracks[args.index];
+      return id === undefined ? null : getTrack(id);
     },
     tracks: (parent) => {
       return parent.tracks.map((id) => getTrack(id));
