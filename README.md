@@ -1,6 +1,51 @@
-Liveql
+LiveQL
 
-Liveql provides a qraphql schema on a subset of the Ableton Live LOM.
+A GraphQL API for Ableton Live. LiveQL exposes a subset of Live's Object Model (LOM) through a local GraphQL server, letting you query and control your Live Set from any HTTP client, script, or web app.
+
+## How it works
+
+LiveQL runs as a Max for Live device with two components:
+
+- A **Max JS script** that talks directly to the LOM via LiveAPI
+- A **Node.js server** (via Node for Max) that serves a GraphQL API on `http://localhost:4000`
+
+External clients send GraphQL queries and mutations over HTTP. The Node server translates these into LOM operations, executes them through the Max layer, and returns the results as JSON.
+
+## Setup
+
+1. Install dependencies:
+
+   ```bash
+   npm install
+   ```
+
+2. Drop `liveql.amxd` onto any track in your Live Set.
+
+3. Click the start button on the device to launch the server.
+
+4. The GraphQL API is now available at `http://localhost:4000`. The server also serves GraphiQL, an interactive query editor you can open in your browser at the same address.
+
+## What you can query
+
+**Song state** — Check whether the song is playing, get the song view, see which track is selected or which clip is in the detail view.
+
+**Tracks** — List all tracks or access a specific track by index. Read properties like name and whether a track has MIDI input.
+
+**Clip slots and clips** — Navigate the session grid. Check if a clip slot contains a clip, then read clip properties like name, length, time signature, and looping state.
+
+**MIDI notes** — Read the full list of notes from a MIDI clip, including pitch, start time, duration, velocity, probability, and mute state.
+
+## What you can mutate
+
+**Playback** — Start and stop the song.
+
+**Tracks** — Rename tracks.
+
+**Clips** — Toggle looping, set clip properties (name, time signature), and fire clips.
+
+**MIDI notes** — Add new notes, modify existing notes, select notes, and remove notes by ID or by pitch/time range.
+
+## Examples
 
 ```bash
 # get whether the song is playing
