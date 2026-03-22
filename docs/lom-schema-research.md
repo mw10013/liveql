@@ -312,17 +312,21 @@ Why it matters here:
 
 The schema defines `Note` and `NotesDictionary`, but the LOM docs do not describe a standalone `Note` object with a canonical path. In this project, notes are data dictionaries returned by `Clip` functions.
 
-Fields used by the schema:
+Fields used by the schema (this is the complete set documented by Cycling74 for Live 11+):
 
-- `note_id`
-- `pitch`
-- `start_time`
-- `duration`
-- `velocity`
-- `mute`
-- `probability`
-- `velocity_deviation`
-- `release_velocity`
+| Field | Type | Range | Description | Default (`add_new_notes`) |
+| --- | --- | --- | --- | --- |
+| `note_id` | int | — | Unique identifier assigned by Live | N/A (auto-assigned) |
+| `pitch` | int | 0–127 | MIDI note number (60 = C3) | Required |
+| `start_time` | float | — | Note start in beats of absolute clip time | Required |
+| `duration` | float | — | Note length in beats | Required |
+| `velocity` | float | 0–127 | Note-on velocity | 100 |
+| `mute` | bool | 0 / 1 | 1 = note is deactivated | 0 |
+| `probability` | float | 0.0–1.0 | Chance the note plays (1.0 = always) | 1.0 |
+| `velocity_deviation` | float | -127.0–127.0 | Range for velocity randomization | 0.0 |
+| `release_velocity` | float | 0–127 | Note-off velocity | 64 |
+
+Live 12 per-note expression data (pitch bend, slide, pressure/MPE) is not exposed through the note dictionary API. Note selection state is handled separately via methods like `select_notes_by_id`.
 
 This matches the dictionary shape documented for:
 
