@@ -52,10 +52,10 @@ The `.amxd` device is binary, but likely contains a Max patcher with these compo
 ## Companion App: `liveql_note_list`
 The sibling project at `../liveql_note_list` looks like a CRA web app that connects to the device's GraphQL endpoint.
 
-- Apollo client is hardcoded to `http://localhost:4000/` in `src/App.tsx`.
+- Apollo client is hardcoded to `http://localhost:4000/graphql` in `src/App.tsx`.
 - UI hints: it expects a single MIDI clip selected in Live (shows "No single midi clip selected in Live.").
 - Actions include Fetch, Save (replace notes), Fire Clip, Start/Stop song.
-- Script `npm run download-schema` points at the same `http://localhost:4000/` endpoint.
+- Script `npm run download-schema` points at the same `http://localhost:4000/graphql` endpoint.
 
 ## How To Validate This In Current Ableton Live (Practical Steps)
 These steps focus on confirming it still works in modern Live versions without rewriting the device.
@@ -69,7 +69,7 @@ These steps focus on confirming it still works in modern Live versions without r
 - If the log is missing, the patcher might not be loading `liveql-n4m.js` (verify inside the device).
 
 3) Verify the GraphQL server is listening
-- In a browser, open `http://localhost:4000/` and check if Apollo Playground or a response appears.
+- In a browser, open `http://localhost:4000/graphql` and check if GraphiQL or a response appears.
 - If the port is blocked or different, check the Max patcher for a port setting.
 
 4) Run the web app

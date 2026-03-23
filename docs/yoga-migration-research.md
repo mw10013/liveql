@@ -72,13 +72,12 @@ const typeDefs = /* GraphQL */ `
 
 const yoga = createYoga({
   schema: createSchema({ typeDefs, resolvers }),
-  graphqlEndpoint: "/",
   maskedErrors: false,
 });
 
 const server = http.createServer(yoga);
 server.listen(4000, () => {
-  console.log(`Server ready at http://localhost:4000`);
+  console.log(`Server ready at http://localhost:4000/graphql`);
 });
 ```
 
@@ -88,7 +87,7 @@ server.listen(4000, () => {
 
 2. **`createYoga(options)`** — returns a Fetch API–compatible handler that doubles as a Node `http.RequestListener`. Pass it directly to `http.createServer()`.
 
-3. **Endpoint**: `graphqlEndpoint: "/"` to preserve Apollo's root path.
+3. **Endpoint**: omit `graphqlEndpoint` and use Yoga's default `/graphql` path.
 
 4. **Port**: 4000, passed explicitly to `server.listen(4000)`.
 

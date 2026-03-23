@@ -179,8 +179,8 @@ For `liveql-m4l.js` (Max JS via `v8`, not Node), changes are picked up when the 
 1. In the Max editor, switch to **performance mode** (lock icon or Cmd+E).
 2. Set the port in the **port number box** (default 4000, range 1024–65535).
 3. Click the **`script start`** message box in the patcher. This starts the Node process running `liveql-n4m.js` with the configured port. [7]
-4. Check the Max Console for startup logs (e.g., `liveql: server ready at http://localhost:4000`).
-5. Browse to `http://localhost:<port>/` to access GraphiQL (built in to Yoga by default).
+4. Check the Max Console for startup logs (e.g., `liveql: server ready at http://localhost:4000/graphql`).
+5. Browse to `http://localhost:<port>/graphql` to access GraphiQL (built in to Yoga by default).
 6. To stop: click **`script stop`**. To check status: click **`script status`** or **`script running`**. [7]
 
 Note: the device has `@autostart 0`, so the Node script does not start automatically when the device loads. You must click `script start` manually. [7]
@@ -226,13 +226,12 @@ The server uses **GraphQL Yoga** (`graphql-yoga@5.18.1`) with `graphql@16.13.1`.
 ```javascript
 const yoga = createYoga({
   schema: createSchema({ typeDefs, resolvers }),
-  graphqlEndpoint: "/",
   maskedErrors: false,
 });
 const server = http.createServer(yoga);
 ```
 
-- Serves at the root path (`/`) — not `/graphql`.
+- Uses Yoga's default GraphQL endpoint (`/graphql`).
 - GraphiQL is enabled by default (browser GET at the endpoint).
 - CORS is enabled by default with permissive settings (fine for localhost).
 - `maskedErrors: false` passes full error detail for local development.

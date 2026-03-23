@@ -404,7 +404,6 @@ const resolvers = {
 
 const yoga = createYoga({
   schema: createSchema({ typeDefs, resolvers }),
-  graphqlEndpoint: "/",
   maskedErrors: false,
 });
 
@@ -412,5 +411,5 @@ const port = parseInt(process.argv[2]) || 4000;
 
 const server = http.createServer(yoga);
 server.listen(port, () => {
-  Max.post(`liveql: server ready at http://localhost:${port}`);
+  Max.post(`liveql: server ready at http://localhost:${port}${yoga.graphqlEndpoint}`);
 });

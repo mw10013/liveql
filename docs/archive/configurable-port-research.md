@@ -53,7 +53,7 @@ const port = parseInt(process.argv[2]) || 4000;
 
 const server = http.createServer(yoga);
 server.listen(port, () => {
-  console.log(`Server ready at http://localhost:${port}`);
+  console.log(`Server ready at http://localhost:${port}/graphql`);
 });
 ```
 

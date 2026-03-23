@@ -7,7 +7,7 @@ A GraphQL API for Ableton Live. LiveQL exposes a subset of Live's Object Model (
 LiveQL runs as a Max for Live device with two components:
 
 - A **Max JS script** that talks directly to the LOM via LiveAPI
-- A **Node.js server** (via Node for Max) that serves a GraphQL API on `http://localhost:4000`
+- A **Node.js server** (via Node for Max) that serves a GraphQL API on `http://localhost:4000/graphql`
 
 External clients send GraphQL queries and mutations over HTTP. The Node server translates these into LOM operations, executes them through the Max layer, and returns the results as JSON.
 
@@ -23,7 +23,7 @@ External clients send GraphQL queries and mutations over HTTP. The Node server t
 
 3. Click the start button on the device to launch the server.
 
-4. The GraphQL API is now available at `http://localhost:4000`. The server also serves GraphiQL, an interactive query editor you can open in your browser at the same address.
+4. The GraphQL API is now available at `http://localhost:4000/graphql`. The server also serves GraphiQL, an interactive query editor you can open in your browser at the same address.
 
 ## What you can query
 
@@ -49,32 +49,32 @@ External clients send GraphQL queries and mutations over HTTP. The Node server t
 
 ```bash
 # get whether the song is playing
-curl -s http://localhost:4000 \
+curl -s http://localhost:4000/graphql \
   -H 'Content-Type: application/json' \
   -d '{"query":"{ live_set { is_playing } }"}' | jq .
 
 # get the first track by index
-curl -s http://localhost:4000 \
+curl -s http://localhost:4000/graphql \
   -H 'Content-Type: application/json' \
   -d '{"query":"{ live_set { track(index: 0) { id name has_midi_input } } }"}' | jq .
 
 # get the first clip slot from the first track by index
-curl -s http://localhost:4000 \
+curl -s http://localhost:4000/graphql \
   -H 'Content-Type: application/json' \
   -d '{"query":"{ live_set { track(index: 0) { clip_slot(index: 0) { has_clip clip { id name looping } } } } }"}' | jq .
 
 # get all tracks and their names
-curl -s http://localhost:4000 \
+curl -s http://localhost:4000/graphql \
   -H 'Content-Type: application/json' \
   -d '{"query":"{ live_set { tracks { id name } } }"}' | jq .
 
 # get clips with their ids and looping state
-curl -s http://localhost:4000 \
+curl -s http://localhost:4000/graphql \
   -H 'Content-Type: application/json' \
   -d '{"query":"{ live_set { tracks { clip_slots { has_clip clip { id name looping } } } } }"}' | jq .
 
 # get notes from the first clip slot of the first track
-curl -s http://localhost:4000 \
+curl -s http://localhost:4000/graphql \
   -H 'Content-Type: application/json' \
   -d '{"query":"{ live_set { track(index: 0) { clip_slot(index: 0) { clip { name notes { pitch start_time duration velocity } } } } } }"}' | jq .
 
@@ -82,7 +82,7 @@ curl -s http://localhost:4000 \
 # first query:
 # { live_set { track(index: 0) { clip_slot(index: 0) { clip { id } } } } }
 # then use that id here
-curl -s http://localhost:4000 \
+curl -s http://localhost:4000/graphql \
   -H 'Content-Type: application/json' \
   -d '{"query":"mutation { clip_set_looping(id: 39, looping: false) { id looping } }"}' | jq .
   
