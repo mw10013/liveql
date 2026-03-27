@@ -32,7 +32,7 @@ GraphQL -> Node for Max -> Max JS -> LiveAPI -> Ableton Live LOM
 ### LOM Coverage (from the GraphQL schema)
 - `live_set` (Song), `Song.view`, `Song.tracks`, `Track.clip_slots`, `ClipSlot.clip`.
 - Clip properties: `name`, `length`, `start_time`, `end_time`, `signature_*`, `is_midi_clip`, `is_arrangement_clip`.
-- Note APIs used: `get_notes_extended`, `add_new_notes`, `apply_note_modifications`, `remove_notes_extended`, `remove_notes_by_id`, `select_all_notes`.
+- Note APIs used: `get_notes_extended`, `get_all_notes_extended`, `add_new_notes`, `apply_note_modifications`, `remove_notes_extended`, `remove_notes_by_id`, `select_all_notes`.
 
 ### Local Runtime Notes
 - `package.json` lists `apollo-server` and `graphql` dependencies. Node for Max expects `node_modules` present.

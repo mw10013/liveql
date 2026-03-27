@@ -88,7 +88,7 @@ graph TD
 | `Clip.signature_denominator` | `Clip` | property | `signature_denominator` | Settable |
 | `Clip.signature_numerator` | `Clip` | property | `signature_numerator` | Settable |
 | `Clip.start_time` | `Clip` | property | `start_time` | Read-only/observe in LOM |
-| `Clip.notes` | `Clip` | function-backed field | `get_notes_extended(...)` | Not a native LOM property |
+| `Clip.notes` | `Clip` | function-backed field | `get_all_notes_extended()` | Not a native LOM property; returns all notes |
 | `Note.mute` | note dictionary field | dictionary key | `mute` | Comes from clip note dictionary APIs |
 | `Mutation.song_start_playing` | `Song` | function | `start_playing()` | Returns refreshed `Song` |
 | `Mutation.song_stop_playing` | `Song` | function | `stop_playing()` | Returns refreshed `Song` |
@@ -269,7 +269,7 @@ Why it matters here:
 - GraphQL type: `Clip`
 - Used members in this repo:
   - properties: `end_time`, `is_arrangement_clip`, `is_midi_clip`, `length`, `looping`, `name`, `signature_denominator`, `signature_numerator`, `start_time`
-  - functions: `fire`, `get_notes_extended`, `get_selected_notes_extended`, `select_all_notes`, `add_new_notes`, `apply_note_modifications`, `remove_notes_by_id`, `remove_notes_extended`
+  - functions: `fire`, `get_notes_extended`, `get_all_notes_extended`, `get_selected_notes_extended`, `select_all_notes`, `add_new_notes`, `apply_note_modifications`, `remove_notes_by_id`, `remove_notes_extended`
 
 What `Clip` represents:
 
@@ -356,6 +356,7 @@ flowchart TD
   K["clip_select_all_notes"] --> K1["Clip select_all_notes"]
   L["clip_remove_notes_by_id"] --> L1["Clip remove_notes_by_id"]
   M["clip_remove_notes_extended"] --> M1["Clip remove_notes_extended"]
+  N["clip_get_all_notes_extended"] --> N1["Clip get_all_notes_extended"]
 ```
 
 ## Important behavioral details and caveats
@@ -363,21 +364,13 @@ flowchart TD
 ### 1. `Clip.notes` is synthetic, not native
 
 - In the LOM docs, `Clip.notes` is an observable bang property, not a property that returns note data.
-- In this schema, `Clip.notes` is implemented by calling:
+- In this schema, `Clip.notes` is implemented by calling `get_all_notes_extended(id)`, which returns all notes regardless of loop/start/end markers.
+- The `clip_get_all_notes_extended` mutation is also exposed for explicit queries.
 
-```js
-get_notes_extended(id, 0, 128, 0, parent.length)
-```
+### 2. ~~The current `Clip.notes` resolver may omit valid notes~~ (resolved)
 
-- That means GraphQL `Clip.notes` is really shorthand for "all notes from pitch 0-127 whose `start_time` falls within `0..clip.length`".
-
-### 2. The current `Clip.notes` resolver may omit valid notes
-
-- `Clip.length` is not the same as "all notes in the clip file forever".
-- The LOM provides `get_all_notes_extended` specifically to return all notes regardless of loop/start/end markers.
-- So the current schema field `Clip.notes` may miss notes that exist outside the queried time span.
-
-This is the biggest semantic mismatch between the GraphQL surface and the deeper LOM.
+- Previously `Clip.notes` used `get_notes_extended(id, 0, 128, 0, parent.length)`, which could miss notes outside the clip length time span.
+- Now uses `get_all_notes_extended` which returns all notes in the clip.
 
 ### 3. The schema does not expose LOM object `type`
 
@@ -405,7 +398,7 @@ If the goal is deeper LOM coverage while staying aligned with this codebase, the
    - `is_playing`, `is_triggered`, `fire`, `stop`, `create_clip`
 5. `Clip`
    - `is_audio_clip`, `is_session_clip`, `looping`, `loop_start`, `loop_end`, `color`, `muted`
-   - `get_all_notes_extended`, `get_notes_by_id`, `quantize`, `duplicate_loop`
+    - `get_notes_by_id`, `quantize`, `duplicate_loop`
 
 ## Most important schema/LOM correspondences
 
@@ -426,5 +419,5 @@ graph LR
 - The current schema is a clean wrapper around a narrow but useful part of the LOM.
 - The true center of gravity is `Clip`, because that is where both playback control and note editing live.
 - `Song.View` is the UI-selection layer, `Track` is the session-grid container, and `ClipSlot` is the session-launch cell.
-- The main place where the GraphQL model diverges from the LOM is `Clip.notes`, which is a convenience field backed by `get_notes_extended`, not a real LOM child/property.
+- The main place where the GraphQL model diverges from the LOM is `Clip.notes`, which is a convenience field backed by `get_all_notes_extended`, not a real LOM child/property. This now returns all notes regardless of clip length.
 - For deeper LOM coverage, the next expansion should probably be `Track.devices`, `MixerDevice`, arrangement clips, and broader `Clip` state.

@@ -208,6 +208,7 @@ const typeDefs = /* GraphQL */ `
       from_time: Float!
       time_span: Float!
     ): Clip
+    clip_get_all_notes_extended(id: Int!): NotesDictionary!
   }
 `;
 
@@ -356,6 +357,10 @@ const resolvers = {
       );
       return getClip(args.id);
     },
+    clip_get_all_notes_extended: async (parent, args) => {
+      var json = await call(args.id, "get_all_notes_extended");
+      return sortJsonNotesDictionary(json);
+    },
   },
   Song: {
     view: (parent) => {
@@ -388,14 +393,8 @@ const resolvers = {
   Clip: {
     notes: async (parent) => {
       if (parent.is_midi_clip) {
-        const data = await getNotesExtended(parent, {
-          id: parent.id,
-          from_pitch: 0,
-          pitch_span: 128,
-          from_time: 0,
-          time_span: parent.length,
-        });
-        return data.notes;
+        var json = await call(parent.id, "get_all_notes_extended");
+        return sortJsonNotesDictionary(json).notes;
       }
       return null;
     },
