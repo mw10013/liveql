@@ -1,6 +1,7 @@
 # Live API / LOM Research for `liveql-n4m.js`
 
 Date: 2026-03-22
+Update: 2026-03-29
 
 ## Scope
 
@@ -24,6 +25,7 @@ Primary sources:
 - Object identity in the Live API is split between stable canonical paths like `live_set tracks 0 clip_slots 1 clip` and dynamic runtime `id`s. The schema uses ids for follow-up reads/mutations.
 - The important hierarchy for this project is: `Song -> Song.View / Track[] -> ClipSlot[] -> Clip`, with note editing and clip state changes hanging off `Clip` methods.
 - The schema also exposes index-addressed access that matches the LOM child-list structure: `Song.track(index)` and `Track.clip_slot(index)`.
+- The Live API provides `Song.continue_playing()`, which resumes transport from the current playback position.
 
 ## How this code reaches the LOM
 
@@ -91,6 +93,7 @@ graph TD
 | `Clip.notes` | `Clip` | function-backed field | `get_all_notes_extended()` | Not a native LOM property; returns all notes |
 | `Note.mute` | note dictionary field | dictionary key | `mute` | Comes from clip note dictionary APIs |
 | `Mutation.song_start_playing` | `Song` | function | `start_playing()` | Returns refreshed `Song` |
+| `Mutation.song_continue_playing` | `Song` | function | `continue_playing()` | Returns refreshed `Song` |
 | `Mutation.song_stop_playing` | `Song` | function | `stop_playing()` | Returns refreshed `Song` |
 | `Mutation.track_set_name` | `Track` | property set | `set name ...` | LOM property write |
 | `Mutation.clip_set_looping` | `Clip` | property set | `set looping ...` | Boolean mutation mapped to clip property write |
@@ -138,6 +141,7 @@ High-value LOM surface beyond the current schema:
   - `session_record`, `record_mode`, `overdub`
   - `signature_numerator`, `signature_denominator`
 - Useful functions:
+  - `continue_playing`
   - `stop_all_clips`
   - `create_scene`
   - `create_audio_track`, `create_midi_track`
@@ -342,6 +346,7 @@ This matches the dictionary shape documented for:
 ```mermaid
 flowchart TD
   A["song_start_playing"] --> A1["Song start_playing"]
+  A2["song_continue_playing"] --> A3["Song continue_playing"]
   B["song_stop_playing"] --> B1["Song stop_playing"]
   C["track_set_name"] --> C1["Track name set"]
   D["clip_set_looping"] --> D1["Clip looping set"]

@@ -181,6 +181,7 @@ const typeDefs = /* GraphQL */ `
 
   type Mutation {
     song_start_playing(id: Int!): Song
+    song_continue_playing(id: Int!): Song
     song_stop_playing(id: Int!): Song
     track_set_name(id: Int!, name: String!): Track
     clip_set_looping(id: Int!, looping: Boolean!): Clip
@@ -288,6 +289,10 @@ const resolvers = {
   Mutation: {
     song_start_playing: async (parent, args) => {
       await call(args.id, "start_playing");
+      return getSong();
+    },
+    song_continue_playing: async (parent, args) => {
+      await call(args.id, "continue_playing");
       return getSong();
     },
     song_stop_playing: async (parent, args) => {

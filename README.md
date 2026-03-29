@@ -37,7 +37,7 @@ External clients send GraphQL queries and mutations over HTTP. The Node server t
 
 ## What you can mutate
 
-**Playback** — Start and stop the song.
+**Playback** — Start, continue, and stop the song.
 
 **Tracks** — Rename tracks.
 
